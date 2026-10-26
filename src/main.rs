@@ -2,6 +2,10 @@
 use std::env;
 use std::fs;
 
+use crate::scanner::Scanner;
+
+mod scanner;
+
 fn main() {
     let args: Vec<String> = env::args().collect();
     if args.len() < 3 {
@@ -22,11 +26,15 @@ fn main() {
                 String::new()
             });
 
-            if !file_contents.is_empty() {
-                panic!("Scanner not implemented");
-            } else {
-                println!("EOF  null"); // Placeholder, replace this line when implementing the scanner
-            }
+            // if !file_contents.is_empty() {
+            //     panic!("Scanner not implemented");
+            // } else {
+            //     println!("EOF  null"); // Placeholder, replace this line when implementing the scanner
+            // }
+
+            let scanner = Scanner::from_str(&file_contents);
+
+            print!("{}", scanner);
         }
         _ => {
             eprintln!("Unknown command: {}", command);
