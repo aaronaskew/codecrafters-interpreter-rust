@@ -1,6 +1,7 @@
 #![allow(unused_variables)]
 use std::env;
 use std::fs;
+use std::process::exit;
 
 use crate::scanner::Scanner;
 
@@ -29,6 +30,10 @@ fn main() {
             let scanner = Scanner::from_str(&file_contents);
 
             print!("{}", scanner);
+
+            if scanner.has_error {
+                exit(65);
+            }
         }
         _ => {
             eprintln!("Unknown command: {}", command);

@@ -63,7 +63,10 @@ impl Display for Token {
 }
 
 pub struct Scanner {
+    source: String,
     tokens: Vec<Token>,
+    pub has_error: bool,
+    location: (usize, usize),
 }
 
 impl Display for Scanner {
@@ -78,34 +81,66 @@ impl Display for Scanner {
 }
 
 impl Scanner {
-    pub(crate) fn from_str(input: &str) -> Self {
-        let mut scanner = Self { tokens: vec![] };
+    fn advance_char(&mut self) -> Option<char> {
+        if self.source.is_empty() {
+            return None;
+        }
 
-        for c in input.chars() {
-            let token_kind = match c {
-                '(' => TokenKind::LEFT_PAREN,
-                ')' => TokenKind::RIGHT_PAREN,
-                '{' => TokenKind::LEFT_BRACE,
-                '}' => TokenKind::RIGHT_BRACE,
-                ',' => TokenKind::COMMA,
-                '.' => TokenKind::DOT,
-                '-' => TokenKind::MINUS,
-                '+' => TokenKind::PLUS,
-                ';' => TokenKind::SEMICOLON,
-                '*' => TokenKind::STAR,
+        while let Some(c) = self.source.pop() {
+            self.location.0 += 1;
+            if c == '\n' {
+                self.location.0 = 1;
+                self.location.1 += 1;
+            } else {
+                return Some(c);
+            }
+        }
 
-                _ => todo!(),
+        None
+    }
+
+    pub(crate) fn from_str(source: &str) -> Self {
+        let mut scanner = Self {
+            source: source.chars().rev().collect(),
+            tokens: vec![],
+            has_error: false,
+            location: (1, 1),
+        };
+
+        while let Some(c) = scanner.advance_char() {
+            let token_kind_res = match c {
+                '(' => Ok(TokenKind::LEFT_PAREN),
+                ')' => Ok(TokenKind::RIGHT_PAREN),
+                '{' => Ok(TokenKind::LEFT_BRACE),
+                '}' => Ok(TokenKind::RIGHT_BRACE),
+                ',' => Ok(TokenKind::COMMA),
+                '.' => Ok(TokenKind::DOT),
+                '-' => Ok(TokenKind::MINUS),
+                '+' => Ok(TokenKind::PLUS),
+                ';' => Ok(TokenKind::SEMICOLON),
+                '*' => Ok(TokenKind::STAR),
+
+                unknown_char => {
+                    eprintln!(
+                        "[line {}] Error: Unexpected character: {}",
+                        scanner.location.1, unknown_char
+                    );
+                    scanner.has_error = true;
+                    Err(())
+                }
             };
 
             let lexeme = c.to_string();
 
             let literal = None;
 
-            scanner.tokens.push(Token {
-                kind: token_kind,
-                lexeme,
-                literal,
-            });
+            if let Ok(token_kind) = token_kind_res {
+                scanner.tokens.push(Token {
+                    kind: token_kind,
+                    lexeme,
+                    literal,
+                });
+            }
         }
 
         scanner.tokens.push(Token::eof());
