@@ -26,12 +26,6 @@ fn main() {
                 String::new()
             });
 
-            // if !file_contents.is_empty() {
-            //     panic!("Scanner not implemented");
-            // } else {
-            //     println!("EOF  null"); // Placeholder, replace this line when implementing the scanner
-            // }
-
             let scanner = Scanner::from_str(&file_contents);
 
             print!("{}", scanner);
