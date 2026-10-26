@@ -22,16 +22,9 @@ impl<'a> Display for Scanner<'a> {
 
 impl<'a> Scanner<'a> {
     fn advance_char(&mut self) -> Option<char> {
-        self.source.peek()?;
-
-        while let Some(c) = self.source.next() {
+        if let Some(c) = self.source.next() {
             self.location.0 += 1;
-            if c == '\n' {
-                self.location.0 = 1;
-                self.location.1 += 1;
-            } else {
-                return Some(c);
-            }
+            return Some(c);
         }
 
         None
@@ -153,6 +146,14 @@ impl<'a> Scanner<'a> {
                         lexeme.push(c);
                         Ok(TokenKind::SLASH)
                     }
+                }
+                ' ' | '\r' | '\t' => {
+                    continue;
+                }
+                '\n' => {
+                    scanner.location.0 = 0;
+                    scanner.location.1 += 1;
+                    continue;
                 }
                 unknown_char => {
                     eprintln!(
