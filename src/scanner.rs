@@ -2,15 +2,15 @@ use std::fmt::{Debug, Display};
 
 #[derive(Debug, Clone)]
 pub enum LiteralKind {
-    String(String),
-    Number(f64),
+    _String(String),
+    _Number(f64),
 }
 
 impl Display for LiteralKind {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let literal_str = match self {
-            LiteralKind::String(s) => s,
-            LiteralKind::Number(n) => &n.to_string(),
+            LiteralKind::_String(s) => s,
+            LiteralKind::_Number(n) => &n.to_string(),
         };
         write!(f, "{}", literal_str)
     }
@@ -22,6 +22,8 @@ pub enum TokenKind {
     EOF,
     LEFT_PAREN,
     RIGHT_PAREN,
+    LEFT_BRACE,
+    RIGHT_BRACE,
 }
 
 pub struct Token {
@@ -77,6 +79,8 @@ impl Scanner {
             let token_kind = match c {
                 '(' => TokenKind::LEFT_PAREN,
                 ')' => TokenKind::RIGHT_PAREN,
+                '{' => TokenKind::LEFT_BRACE,
+                '}' => TokenKind::RIGHT_BRACE,
                 _ => todo!(),
             };
 
