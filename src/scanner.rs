@@ -24,6 +24,12 @@ pub enum TokenKind {
     RIGHT_PAREN,
     LEFT_BRACE,
     RIGHT_BRACE,
+    COMMA,
+    DOT,
+    MINUS,
+    PLUS,
+    SEMICOLON,
+    STAR,
 }
 
 pub struct Token {
@@ -81,6 +87,13 @@ impl Scanner {
                 ')' => TokenKind::RIGHT_PAREN,
                 '{' => TokenKind::LEFT_BRACE,
                 '}' => TokenKind::RIGHT_BRACE,
+                ',' => TokenKind::COMMA,
+                '.' => TokenKind::DOT,
+                '-' => TokenKind::MINUS,
+                '+' => TokenKind::PLUS,
+                ';' => TokenKind::SEMICOLON,
+                '*' => TokenKind::STAR,
+
                 _ => todo!(),
             };
 
