@@ -223,6 +223,24 @@ impl<'a> Scanner<'a> {
                         Ok(TokenKind::BANG)
                     }
                 }
+                '<' => {
+                    lexeme.push(c);
+                    if scanner.advance_char_if_match('=') {
+                        lexeme.push('=');
+                        Ok(TokenKind::LESS_EQUAL)
+                    } else {
+                        Ok(TokenKind::LESS)
+                    }
+                }
+                '>' => {
+                    lexeme.push(c);
+                    if scanner.advance_char_if_match('=') {
+                        lexeme.push('=');
+                        Ok(TokenKind::GREATER_EQUAL)
+                    } else {
+                        Ok(TokenKind::GREATER)
+                    }
+                }
 
                 unknown_char => {
                     eprintln!(
