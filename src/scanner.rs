@@ -214,6 +214,15 @@ impl<'a> Scanner<'a> {
                         Ok(TokenKind::EQUAL)
                     }
                 }
+                '!' => {
+                    lexeme.push(c);
+                    if scanner.advance_char_if_match('=') {
+                        lexeme.push('=');
+                        Ok(TokenKind::BANG_EQUAL)
+                    } else {
+                        Ok(TokenKind::BANG)
+                    }
+                }
 
                 unknown_char => {
                     eprintln!(
