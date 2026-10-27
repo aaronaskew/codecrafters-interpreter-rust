@@ -2,14 +2,14 @@ use std::fmt::Display;
 
 #[derive(Debug, Clone)]
 pub enum LiteralKind {
-    _String(String),
+    String(String),
     _Number(f64),
 }
 
 impl Display for LiteralKind {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let literal_str = match self {
-            LiteralKind::_String(s) => s,
+            LiteralKind::String(s) => s,
             LiteralKind::_Number(n) => &n.to_string(),
         };
         write!(f, "{}", literal_str)

@@ -1,3 +1,4 @@
+use crate::token::LiteralKind;
 use crate::token::Token;
 use crate::token::TokenKind;
 use std::{fmt::Display, iter::Peekable, str::Chars};
@@ -52,6 +53,8 @@ impl<'a> Scanner<'a> {
         };
 
         while let Some(c) = scanner.advance_char() {
+            let mut literal = None;
+
             let mut lexeme = String::new();
 
             let token_kind_res = match c {
@@ -155,6 +158,31 @@ impl<'a> Scanner<'a> {
                     scanner.location.1 += 1;
                     continue;
                 }
+                '"' => {
+                    // String
+                    lexeme.push('"');
+                    let mut string_literal = String::new();
+                    let mut terminated = false;
+                    while let Some(ch) = scanner.advance_char() {
+                        if ch != '"' {
+                            string_literal.push(ch);
+                            lexeme.push(ch);
+                        } else {
+                            lexeme.push('"');
+                            terminated = true;
+                            break;
+                        }
+                    }
+
+                    if terminated {
+                        literal = Some(LiteralKind::String(string_literal));
+                        Ok(TokenKind::STRING)
+                    } else {
+                        eprintln!("[line {}] Error: Unterminated string.", scanner.location.1);
+                        scanner.has_error = true;
+                        Err(())
+                    }
+                }
                 unknown_char => {
                     eprintln!(
                         "[line {}] Error: Unexpected character: {}",
@@ -164,8 +192,6 @@ impl<'a> Scanner<'a> {
                     Err(())
                 }
             };
-
-            let literal = None;
 
             if let Ok(token_kind) = token_kind_res {
                 scanner.tokens.push(Token {
