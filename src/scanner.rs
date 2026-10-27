@@ -1,10 +1,10 @@
 use crate::token::LiteralKind;
 use crate::token::Token;
 use crate::token::TokenKind;
-use std::{fmt::Display, iter::Peekable, str::Chars};
+use std::{fmt::Display, str::Chars};
 
 pub struct Scanner<'a> {
-    source: Peekable<Chars<'a>>,
+    source: itertools::PeekNth<Chars<'a>>,
     tokens: Vec<Token>,
     pub has_error: bool,
     location: (usize, usize),
@@ -43,7 +43,7 @@ impl<'a> Scanner<'a> {
     }
 
     pub(crate) fn from_str(source: &'a str) -> Self {
-        let source = source.chars().peekable();
+        let source = itertools::peek_nth(source.chars());
 
         let mut scanner = Self {
             source,
@@ -158,8 +158,8 @@ impl<'a> Scanner<'a> {
                     scanner.location.1 += 1;
                     continue;
                 }
+                // String literal
                 '"' => {
-                    // String
                     lexeme.push('"');
                     let mut string_literal = String::new();
                     let mut terminated = false;
@@ -183,6 +183,44 @@ impl<'a> Scanner<'a> {
                         Err(())
                     }
                 }
+                // Number literal
+                '0'..='9' => {
+                    lexeme.push(c);
+                    let mut num_string = String::from(c);
+
+                    // handle integer part
+                    while let Some(&ch) = scanner.source.peek() {
+                        if ch.is_ascii_digit() {
+                            lexeme.push(ch);
+                            num_string.push(scanner.advance_char().expect("must be a digit"));
+                        } else {
+                            if ch == '.' {
+                                // there may be a fractional part
+                                if let Some(ch2) = scanner.source.peek_nth(2)
+                                    && ch2.is_ascii_digit()
+                                {
+                                    // there is a fractional part
+                                    lexeme.push('.');
+                                    num_string.push(scanner.advance_char().expect("must be dot"));
+                                    while let Some(&ch) = scanner.source.peek()
+                                        && ch.is_ascii_digit()
+                                    {
+                                        lexeme.push(ch);
+                                        num_string
+                                            .push(scanner.advance_char().expect("must be digit"));
+                                    }
+                                }
+                            } else {
+                                break;
+                            }
+                        }
+                    }
+
+                    literal = Some(LiteralKind::Number(
+                        num_string.parse().expect("should be parsable as f64"),
+                    ));
+                    Ok(TokenKind::NUMBER)
+                }
                 unknown_char => {
                     eprintln!(
                         "[line {}] Error: Unexpected character: {}",
@@ -194,11 +232,15 @@ impl<'a> Scanner<'a> {
             };
 
             if let Ok(token_kind) = token_kind_res {
-                scanner.tokens.push(Token {
+                let token = Token {
                     kind: token_kind,
                     lexeme,
                     literal,
-                });
+                };
+
+                // eprintln!("token: {}", token);
+
+                scanner.tokens.push(token);
             }
         }
 
