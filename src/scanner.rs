@@ -42,6 +42,19 @@ impl<'a> Scanner<'a> {
         false
     }
 
+    fn advance_if<F>(&mut self, f: F) -> Option<char>
+    where
+        F: Fn(char) -> bool,
+    {
+        if let Some(&peeked_ch) = self.source.peek()
+            && f(peeked_ch)
+        {
+            return self.advance_char();
+        }
+
+        None
+    }
+
     pub(crate) fn from_str(source: &'a str) -> Self {
         let source = itertools::peek_nth(source.chars());
 
@@ -220,6 +233,37 @@ impl<'a> Scanner<'a> {
                         num_string.parse().expect("should be parsable as f64"),
                     ));
                     Ok(TokenKind::NUMBER)
+                }
+                // identifier
+                '_' | 'a'..='z' | 'A'..='Z' => {
+                    lexeme.push(c);
+                    let mut identifier = String::from(c);
+                    while let Some(ch) =
+                        scanner.advance_if(|c| c.is_alphanumeric() || matches!(c, '_' | '-'))
+                    {
+                        lexeme.push(ch);
+                        identifier.push(ch);
+                    }
+
+                    Ok(match identifier.as_str() {
+                        "and" => TokenKind::AND,
+                        "class" => TokenKind::CLASS,
+                        "else" => TokenKind::ELSE,
+                        "false" => TokenKind::FALSE,
+                        "fun" => TokenKind::FUN,
+                        "for" => TokenKind::FOR,
+                        "if" => TokenKind::IF,
+                        "nil" => TokenKind::NIL,
+                        "or" => TokenKind::OR,
+                        "print" => TokenKind::PRINT,
+                        "return" => TokenKind::RETURN,
+                        "super" => TokenKind::SUPER,
+                        "this" => TokenKind::THIS,
+                        "true" => TokenKind::TRUE,
+                        "var" => TokenKind::VAR,
+                        "while" => TokenKind::WHILE,
+                        _ => TokenKind::IDENTIFIER,
+                    })
                 }
                 unknown_char => {
                     eprintln!(
