@@ -3,9 +3,11 @@ use std::env;
 use std::fs;
 use std::process::exit;
 
-use crate::scanner::Scanner;
+use crate::parse::Parser;
+use crate::scan::Scanner;
 
-mod scanner;
+mod parse;
+mod scan;
 mod token;
 
 fn main() {
@@ -18,16 +20,18 @@ fn main() {
     let command = &args[1];
     let filename = &args[2];
 
+    let file_contents = fs::read_to_string(filename).unwrap_or_else(|_| {
+        eprintln!("Failed to read file {}", filename);
+        String::new()
+    });
+
     match command.as_str() {
+        "parse" => {
+            let mut parser = Parser::from(Scanner::from_str(&file_contents));
+            eprint!("{:?}", parser.parse());
+            print!("{}", parser.parse());
+        }
         "tokenize" => {
-            // You can use print statements as follows for debugging, they'll be visible when running tests.
-            eprintln!("Logs from your program will appear here!");
-
-            let file_contents = fs::read_to_string(filename).unwrap_or_else(|_| {
-                eprintln!("Failed to read file {}", filename);
-                String::new()
-            });
-
             let scanner = Scanner::from_str(&file_contents);
 
             print!("{}", scanner);

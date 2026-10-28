@@ -22,6 +22,10 @@ impl<'a> Display for Scanner<'a> {
 }
 
 impl<'a> Scanner<'a> {
+    pub fn tokens(self) -> Vec<Token> {
+        self.tokens
+    }
+
     fn advance_char(&mut self) -> Option<char> {
         if let Some(c) = self.source.next() {
             self.location.0 += 1;

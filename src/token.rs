@@ -24,7 +24,7 @@ impl Display for LiteralKind {
 }
 
 #[allow(non_camel_case_types, clippy::upper_case_acronyms)]
-#[derive(Debug)]
+#[derive(Debug, PartialEq, Clone)]
 pub enum TokenKind {
     // Single-character tokens.
     LEFT_PAREN,
@@ -75,6 +75,7 @@ pub enum TokenKind {
     EOF,
 }
 
+#[derive(Debug, Clone)]
 pub struct Token {
     pub(crate) kind: TokenKind,
     pub(crate) lexeme: String,
