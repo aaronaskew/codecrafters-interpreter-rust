@@ -1,4 +1,4 @@
-use std::fmt::Display;
+use std::{fmt::Display, process::exit};
 
 use crate::{
     scan::Scanner,
@@ -118,28 +118,22 @@ impl Expr {
     }
 
     fn parenthesize(&self) -> String {
-        let output = format!(
-            "({}",
-            match self {
-                Expr::Literal(expr_literal) => expr_literal.to_string(),
-                Expr::Unary { operator, right } => format!("{} {}", operator, right.parenthesize()),
-                Expr::Binary {
-                    left,
-                    operator,
-                    right,
-                } => format!(
-                    "{} {} {}",
-                    operator,
-                    left.parenthesize(),
-                    right.parenthesize()
-                ),
-                Expr::Grouping { expr } => format!("group {}", expr.parenthesize()),
-            }
-        );
-
-        let output = format!("{})", output);
-
-        output
+        (match self {
+            Expr::Literal(expr_literal) => expr_literal.to_string(),
+            Expr::Unary { operator, right } => format!("({} {})", operator, right.parenthesize()),
+            Expr::Binary {
+                left,
+                operator,
+                right,
+            } => format!(
+                "({} {} {})",
+                operator,
+                left.parenthesize(),
+                right.parenthesize()
+            ),
+            Expr::Grouping { expr } => format!("(group {})", expr.parenthesize()),
+        })
+        .to_string()
     }
 }
 
@@ -182,7 +176,9 @@ pub struct Parser {
 
 impl Parser {
     pub fn parse(&mut self) -> Expr {
-        self.expression()
+        let expr = self.expression();
+
+        dbg!(expr)
     }
 
     fn match_token(&mut self, kinds: &[TokenKind]) -> bool {
@@ -231,8 +227,12 @@ impl Parser {
             .clone()
     }
 
-    fn consume(&self, right_paren: TokenKind, arg: &str) -> Token {
-        todo!()
+    fn consume(&mut self, kind: TokenKind, err_msg: &str) -> Result<Token, String> {
+        if self.check(&kind) {
+            return Ok(self.advance());
+        }
+
+        Err(err_msg.into())
     }
 
     fn expression(&mut self) -> Expr {
@@ -341,9 +341,16 @@ impl Parser {
 
         if self.match_token(&[TokenKind::LEFT_PAREN]) {
             let expr = self.expression();
-            self.consume(TokenKind::RIGHT_PAREN, "Expect ')' after expression.");
-
-            return Expr::Grouping { expr: expr.into() };
+            dbg!(&expr);
+            match self.consume(TokenKind::RIGHT_PAREN, "Expect ')' after expression.") {
+                Ok(_) => {
+                    return Expr::Grouping { expr: expr.into() };
+                }
+                Err(msg) => {
+                    eprintln!("{}", msg);
+                    exit(65);
+                }
+            }
         }
 
         unreachable!("primary should not reach this point")
