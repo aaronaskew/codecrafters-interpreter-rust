@@ -28,8 +28,7 @@ fn main() {
     match command.as_str() {
         "parse" => {
             let mut parser = Parser::from(Scanner::from_str(&file_contents));
-            eprint!("{:?}", parser.parse());
-            print!("{}", parser.parse());
+            parser.parse().print_ast();
         }
         "tokenize" => {
             let scanner = Scanner::from_str(&file_contents);

@@ -206,36 +206,34 @@ impl<'a> Scanner<'a> {
                     let mut num_string = String::from(c);
 
                     // handle integer part
-                    while let Some(&ch) = scanner.source.peek() {
-                        if ch.is_ascii_digit() {
+                    while let Some(&ch) = scanner.source.peek()
+                        && ch.is_ascii_digit()
+                    {
+                        lexeme.push(ch);
+                        num_string.push(scanner.advance_char().expect("must be a digit"));
+                    }
+
+                    // handle possible fractional part
+                    if let Some(&ch) = scanner.source.peek()
+                        && let Some(ch2) = scanner.source.peek_nth(1)
+                        && ch == '.'
+                        && ch2.is_ascii_digit()
+                    {
+                        lexeme.push('.');
+                        num_string.push(scanner.advance_char().expect("is dot"));
+
+                        while let Some(&ch) = scanner.source.peek()
+                            && ch.is_ascii_digit()
+                        {
                             lexeme.push(ch);
                             num_string.push(scanner.advance_char().expect("must be a digit"));
-                        } else {
-                            if ch == '.' {
-                                // there may be a fractional part
-                                if let Some(ch2) = scanner.source.peek_nth(2)
-                                    && ch2.is_ascii_digit()
-                                {
-                                    // there is a fractional part
-                                    lexeme.push('.');
-                                    num_string.push(scanner.advance_char().expect("must be dot"));
-                                    while let Some(&ch) = scanner.source.peek()
-                                        && ch.is_ascii_digit()
-                                    {
-                                        lexeme.push(ch);
-                                        num_string
-                                            .push(scanner.advance_char().expect("must be digit"));
-                                    }
-                                }
-                            } else {
-                                break;
-                            }
                         }
                     }
 
                     literal = Some(LiteralKind::Number(
                         num_string.parse().expect("should be parsable as f64"),
                     ));
+
                     Ok(TokenKind::NUMBER)
                 }
                 // identifier
