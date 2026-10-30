@@ -54,6 +54,7 @@ pub enum Operator {
     Subtract,
     Multiply,
     Divide,
+    Not,
 }
 
 impl From<Token> for Operator {
@@ -69,6 +70,7 @@ impl From<Token> for Operator {
             TokenKind::MINUS => Self::Subtract,
             TokenKind::STAR => Self::Multiply,
             TokenKind::SLASH => Self::Divide,
+            TokenKind::BANG => Self::Not,
             _ => unreachable!("Not an operator"),
         }
     }
@@ -90,6 +92,7 @@ impl Display for Operator {
                 Operator::Subtract => "-",
                 Operator::Multiply => "*",
                 Operator::Divide => "/",
+                Operator::Not => "!",
             }
         )
     }
