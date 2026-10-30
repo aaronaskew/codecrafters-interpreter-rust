@@ -58,8 +58,16 @@ impl<'a> Scanner<'a> {
 
         None
     }
+}
 
-    pub(crate) fn from_str(source: &'a str) -> Self {
+// impl<'a> From<String> for Scanner<'a> {
+//     fn from(source: String) -> Self {
+//         Self::from(source.as_str())
+//     }
+// }
+
+impl<'a> From<&'a str> for Scanner<'a> {
+    fn from(source: &'a str) -> Self {
         let source = itertools::peek_nth(source.chars());
 
         let mut scanner = Self {

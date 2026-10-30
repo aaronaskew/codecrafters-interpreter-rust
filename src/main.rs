@@ -3,12 +3,7 @@ use std::env;
 use std::fs;
 use std::process::exit;
 
-use crate::parse::Parser;
-use crate::scan::Scanner;
-
-mod parse;
-mod scan;
-mod token;
+use lox_interpreter::*;
 
 fn main() {
     let args: Vec<String> = env::args().collect();
@@ -27,11 +22,11 @@ fn main() {
 
     match command.as_str() {
         "parse" => {
-            let mut parser = Parser::from(Scanner::from_str(&file_contents));
-            parser.parse().print_ast();
+            let mut parser = Parser::from(file_contents.as_str());
+            //    parser.parse().print_ast();
         }
         "tokenize" => {
-            let scanner = Scanner::from_str(&file_contents);
+            let scanner = Scanner::from(file_contents.as_str());
 
             print!("{}", scanner);
 

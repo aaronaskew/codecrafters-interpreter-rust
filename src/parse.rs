@@ -162,6 +162,9 @@ impl Display for Expr {
 }
 
 #[derive(Debug)]
+struct ParseError {}
+
+#[derive(Debug)]
 pub struct Parser {
     tokens: Vec<Token>,
     current: usize,
@@ -178,10 +181,10 @@ pub struct Parser {
 //                | "(" expression ")" ;
 
 impl Parser {
-    pub fn parse(&mut self) -> Expr {
-        let expr = self.expression();
+    pub fn parse(&mut self) -> Result<Expr, ParseError> {
+        let expr = self.expression()?;
 
-        dbg!(expr)
+        dbg!(Ok(expr))
     }
 
     fn match_token(&mut self, kinds: &[TokenKind]) -> bool {
@@ -238,17 +241,17 @@ impl Parser {
         Err(err_msg.into())
     }
 
-    fn expression(&mut self) -> Expr {
+    fn expression(&mut self) -> Result<Expr, ParseError> {
         eprintln!("==expression== current token_kind: {:?}", self.peek().kind);
         self.equality()
     }
-    fn equality(&mut self) -> Expr {
+    fn equality(&mut self) -> Result<Expr, ParseError> {
         eprintln!("==equality== current token_kind: {:?}", self.peek().kind);
-        let mut expr = self.comparison();
+        let mut expr = self.comparison()?;
 
         while self.match_token(&[TokenKind::EQUAL_EQUAL, TokenKind::BANG_EQUAL]) {
             let operator = Operator::from(self.previous());
-            let right = self.comparison();
+            let right = self.comparison()?;
             expr = Expr::Binary {
                 left: expr.into(),
                 operator,
@@ -256,12 +259,12 @@ impl Parser {
             };
         }
 
-        expr
+        Ok(expr)
     }
 
-    fn comparison(&mut self) -> Expr {
+    fn comparison(&mut self) -> Result<Expr, ParseError> {
         eprintln!("==comparision== current token_kind: {:?}", self.peek().kind);
-        let mut expr = self.term();
+        let mut expr = self.term()?;
 
         while self.match_token(&[
             TokenKind::LESS,
@@ -270,7 +273,7 @@ impl Parser {
             TokenKind::GREATER_EQUAL,
         ]) {
             let operator = Operator::from(self.previous());
-            let right = self.term();
+            let right = self.term()?;
             expr = Expr::Binary {
                 left: expr.into(),
                 operator,
@@ -278,76 +281,80 @@ impl Parser {
             };
         }
 
-        expr
+        Ok(expr)
     }
-    fn term(&mut self) -> Expr {
+    fn term(&mut self) -> Result<Expr, ParseError> {
         eprintln!("==term== current token_kind: {:?}", self.peek().kind);
-        let mut expr = self.factor();
+        let mut expr = self.factor()?;
 
         while self.match_token(&[TokenKind::PLUS, TokenKind::MINUS]) {
             let operator = Operator::from(self.previous());
-            let right = self.factor();
+            let right = self.factor()?;
             expr = Expr::Binary {
                 left: expr.into(),
                 operator,
                 right: right.into(),
             };
         }
-        expr
+        Ok(expr)
     }
-    fn factor(&mut self) -> Expr {
+    fn factor(&mut self) -> Result<Expr, ParseError> {
         eprintln!("==factor== current token_kind: {:?}", self.peek().kind);
-        let mut expr = self.unary();
+        let mut expr = self.unary()?;
 
         while self.match_token(&[TokenKind::SLASH, TokenKind::STAR]) {
             let operator = Operator::from(self.previous());
-            let right = self.unary();
+            let right = self.unary()?;
             expr = Expr::Binary {
                 left: expr.into(),
                 operator,
                 right: right.into(),
             };
         }
-        expr
+        Ok(expr)
     }
 
-    fn unary(&mut self) -> Expr {
+    fn unary(&mut self) -> Result<Expr, ParseError> {
         eprintln!("==unary== current token_kind: {:?}", self.peek().kind);
 
         if self.match_token(&[TokenKind::BANG, TokenKind::MINUS]) {
             let operator = Operator::from(self.previous());
-            let right = self.unary();
+            let right = self.unary()?;
 
-            Expr::Unary {
+            Ok(Expr::Unary {
                 operator,
                 right: right.into(),
-            }
+            })
         } else {
             self.primary()
         }
     }
 
-    fn primary(&mut self) -> Expr {
+    fn primary(&mut self) -> Result<Expr, ParseError> {
         eprintln!("==primary== current token_kind: {:?}", self.peek().kind);
 
         if self.match_token(&[TokenKind::TRUE]) {
-            return Expr::Literal(ExprLiteral::True);
+            return Ok(Expr::Literal(ExprLiteral::True));
         } else if self.match_token(&[TokenKind::FALSE]) {
-            return Expr::Literal(ExprLiteral::False);
+            return Ok(Expr::Literal(ExprLiteral::False));
         } else if self.match_token(&[TokenKind::NIL]) {
-            return Expr::Literal(ExprLiteral::Nil);
+            return Ok(Expr::Literal(ExprLiteral::Nil));
         } else if self.match_token(&[TokenKind::NUMBER]) {
-            return Expr::Literal(ExprLiteral::Number(self.previous().literal.unwrap()));
+            return Ok(Expr::Literal(ExprLiteral::Number(
+                self.previous().literal.unwrap(),
+            )));
         } else if self.match_token(&[TokenKind::STRING]) {
-            return Expr::Literal(ExprLiteral::String(self.previous().literal.unwrap()));
+            return Ok(Expr::Literal(ExprLiteral::String(
+                self.previous().literal.unwrap(),
+            )));
         }
 
         if self.match_token(&[TokenKind::LEFT_PAREN]) {
-            let expr = self.expression();
+            let expr = self.expression()?;
             dbg!(&expr);
             match self.consume(TokenKind::RIGHT_PAREN, "Expect ')' after expression.") {
                 Ok(_) => {
-                    return Expr::Grouping { expr: expr.into() };
+                    return Ok(Expr::Grouping { expr: expr.into() });
                 }
                 Err(msg) => {
                     eprintln!("{}", msg);
@@ -366,5 +373,11 @@ impl From<Scanner<'_>> for Parser {
             tokens: scanner.tokens(),
             current: 0,
         }
+    }
+}
+
+impl From<String> for Parser {
+    fn from(value: String) -> Self {
+        Self::from(Scanner::from(value))
     }
 }
