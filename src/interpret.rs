@@ -1,6 +1,6 @@
 use std::fmt::Display;
 
-use crate::Expr;
+use crate::{Expr, token::LiteralKind};
 
 #[derive(Debug)]
 pub struct Interpreter {
@@ -15,8 +15,20 @@ impl Interpreter {
     pub fn evaluate(&self) -> Value {
         match &self.expr {
             Expr::Literal(expr_literal) => match expr_literal {
-                crate::ExprLiteral::Number(literal_kind) => todo!(),
-                crate::ExprLiteral::String(literal_kind) => todo!(),
+                crate::ExprLiteral::Number(literal_kind) => {
+                    let LiteralKind::Number(n) = literal_kind else {
+                        panic!("must be number")
+                    };
+
+                    Value::Number(*n)
+                }
+                crate::ExprLiteral::String(literal_kind) => {
+                    let LiteralKind::String(s) = literal_kind else {
+                        panic!("must be string");
+                    };
+
+                    Value::String(s.into())
+                }
                 crate::ExprLiteral::True => Value::Boolean(true),
                 crate::ExprLiteral::False => Value::Boolean(false),
                 crate::ExprLiteral::Nil => Value::Nil,
@@ -37,6 +49,8 @@ impl Interpreter {
 pub enum Value {
     Boolean(bool),
     Nil,
+    Number(f64),
+    String(String),
 }
 
 impl Display for Value {
@@ -47,6 +61,8 @@ impl Display for Value {
             match self {
                 Value::Boolean(b) => b.to_string(),
                 Value::Nil => "nil".to_string(),
+                Value::Number(n) => n.to_string(),
+                Value::String(s) => s.into(),
             }
         )
     }
