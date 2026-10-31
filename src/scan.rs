@@ -284,6 +284,7 @@ impl<'a> From<&'a str> for Scanner<'a> {
                     kind: token_kind,
                     lexeme,
                     literal,
+                    location: scanner.location,
                 };
 
                 // eprintln!("token: {}", token);
@@ -292,7 +293,7 @@ impl<'a> From<&'a str> for Scanner<'a> {
             }
         }
 
-        scanner.tokens.push(Token::eof());
+        scanner.tokens.push(Token::eof(scanner.location));
 
         scanner
     }

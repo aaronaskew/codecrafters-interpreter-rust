@@ -18,6 +18,7 @@ struct Cli {
 enum Commands {
     Tokenize { file_path: PathBuf },
     Parse { file_path: PathBuf },
+    Evaluate { file_path: PathBuf },
 }
 
 fn file_contents(path: &PathBuf) -> String {
@@ -52,10 +53,19 @@ fn main() -> anyhow::Result<()> {
 
             match parser.parse() {
                 Ok(expr) => expr.print_ast(),
-                Err(e) => {
-                    eprintln!("{}", e);
-                    exit(65)
+                Err(e) => exit(65),
+            }
+        }
+        Commands::Evaluate { file_path } => {
+            let source = file_contents(file_path);
+            let scanner = Scanner::from(source.as_str());
+            let mut parser = codecrafters_interpreter::Parser::new(&scanner.tokens());
+
+            match parser.parse() {
+                Ok(expr) => {
+                    println!("{}", Interpreter::new(expr).evaluate())
                 }
+                Err(e) => exit(65),
             }
         }
     }

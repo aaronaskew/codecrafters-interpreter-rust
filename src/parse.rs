@@ -164,11 +164,11 @@ impl Display for Expr {
 }
 
 #[derive(Debug, Error)]
-pub struct ParseError(String);
+pub struct ParseError;
 
 impl Display for ParseError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}", self.0)
+        write!(f, "ParseError",)
     }
 }
 
@@ -199,7 +199,7 @@ impl Parser {
     pub fn parse(&mut self) -> Result<Expr, ParseError> {
         let expr = self.expression()?;
 
-        dbg!(Ok(expr))
+        Ok(expr)
     }
 
     fn match_token(&mut self, kinds: &[TokenKind]) -> bool {
@@ -222,12 +222,12 @@ impl Parser {
     }
 
     fn advance(&mut self) -> Token {
-        eprintln!("begin advance() {:#?}", self);
+        // eprintln!("begin advance() {:#?}", self);
         if !self.is_at_end() {
             self.current += 1;
         }
 
-        dbg!(self.previous())
+        self.previous()
     }
 
     fn is_at_end(&self) -> bool {
@@ -257,11 +257,11 @@ impl Parser {
     }
 
     fn expression(&mut self) -> Result<Expr, ParseError> {
-        eprintln!("==expression== current token_kind: {:?}", self.peek().kind);
+        // eprintln!("==expression== current token_kind: {:?}", self.peek().kind);
         self.equality()
     }
     fn equality(&mut self) -> Result<Expr, ParseError> {
-        eprintln!("==equality== current token_kind: {:?}", self.peek().kind);
+        // eprintln!("==equality== current token_kind: {:?}", self.peek().kind);
         let mut expr = self.comparison()?;
 
         while self.match_token(&[TokenKind::EQUAL_EQUAL, TokenKind::BANG_EQUAL]) {
@@ -278,7 +278,7 @@ impl Parser {
     }
 
     fn comparison(&mut self) -> Result<Expr, ParseError> {
-        eprintln!("==comparision== current token_kind: {:?}", self.peek().kind);
+        // eprintln!("==comparision== current token_kind: {:?}", self.peek().kind);
         let mut expr = self.term()?;
 
         while self.match_token(&[
@@ -299,7 +299,7 @@ impl Parser {
         Ok(expr)
     }
     fn term(&mut self) -> Result<Expr, ParseError> {
-        eprintln!("==term== current token_kind: {:?}", self.peek().kind);
+        // eprintln!("==term== current token_kind: {:?}", self.peek().kind);
         let mut expr = self.factor()?;
 
         while self.match_token(&[TokenKind::PLUS, TokenKind::MINUS]) {
@@ -314,7 +314,7 @@ impl Parser {
         Ok(expr)
     }
     fn factor(&mut self) -> Result<Expr, ParseError> {
-        eprintln!("==factor== current token_kind: {:?}", self.peek().kind);
+        // eprintln!("==factor== current token_kind: {:?}", self.peek().kind);
         let mut expr = self.unary()?;
 
         while self.match_token(&[TokenKind::SLASH, TokenKind::STAR]) {
@@ -330,7 +330,7 @@ impl Parser {
     }
 
     fn unary(&mut self) -> Result<Expr, ParseError> {
-        eprintln!("==unary== current token_kind: {:?}", self.peek().kind);
+        // eprintln!("==unary== current token_kind: {:?}", self.peek().kind);
 
         if self.match_token(&[TokenKind::BANG, TokenKind::MINUS]) {
             let operator = Operator::from(self.previous());
@@ -346,7 +346,7 @@ impl Parser {
     }
 
     fn primary(&mut self) -> Result<Expr, ParseError> {
-        eprintln!("==primary== current token_kind: {:?}", self.peek().kind);
+        // eprintln!("==primary== current token_kind: {:?}", self.peek().kind);
 
         if self.match_token(&[TokenKind::TRUE]) {
             return Ok(Expr::Literal(ExprLiteral::True));
@@ -366,7 +366,6 @@ impl Parser {
 
         if self.match_token(&[TokenKind::LEFT_PAREN]) {
             let expr = self.expression()?;
-            dbg!(&expr);
             match self.consume(TokenKind::RIGHT_PAREN, "Expect ')' after expression.") {
                 Ok(_) => {
                     return Ok(Expr::Grouping { expr: expr.into() });
@@ -378,6 +377,21 @@ impl Parser {
             }
         }
 
-        Err(ParseError("primary should not reach this point".into()))
+        Err(Self::error(self.peek(), "Expect expression".into()))
+    }
+
+    fn error(token: Token, msg: String) -> ParseError {
+        if token.kind == TokenKind::EOF {
+            eprintln!("[line {}] Error at end: {}.", token.line(), msg);
+        } else {
+            eprintln!(
+                "[line {}] Error at '{}': {}.",
+                token.line(),
+                token.lexeme,
+                msg
+            );
+        }
+
+        ParseError
     }
 }

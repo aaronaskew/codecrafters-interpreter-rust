@@ -80,15 +80,21 @@ pub struct Token {
     pub(crate) kind: TokenKind,
     pub(crate) lexeme: String,
     pub(crate) literal: Option<LiteralKind>,
+    pub(crate) location: (usize, usize),
 }
 
 impl Token {
-    pub fn eof() -> Self {
+    pub fn eof(location: (usize, usize)) -> Self {
         Self {
             kind: TokenKind::EOF,
             lexeme: String::new(),
             literal: None,
+            location,
         }
+    }
+
+    pub(crate) fn line(&self) -> usize {
+        self.location.1
     }
 }
 
