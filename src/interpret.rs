@@ -13,7 +13,11 @@ impl Interpreter {
     }
 
     pub fn evaluate(&self) -> Value {
-        match &self.expr {
+        self.visit(&self.expr)
+    }
+
+    fn visit(&self, expr: &Expr) -> Value {
+        match expr {
             Expr::Literal(expr_literal) => match expr_literal {
                 crate::ExprLiteral::Number(literal_kind) => {
                     let LiteralKind::Number(n) = literal_kind else {
@@ -40,7 +44,7 @@ impl Interpreter {
                 operator,
                 right,
             } => todo!(),
-            Expr::Grouping { expr } => todo!(),
+            Expr::Grouping { expr } => self.visit(expr),
         }
     }
 }
