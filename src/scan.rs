@@ -10,17 +10,6 @@ pub struct Scanner<'a> {
     location: (usize, usize),
 }
 
-impl<'a> Display for Scanner<'a> {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        // let mut display_string = String::new();
-        for token in &self.tokens {
-            let _ = writeln!(f, "{}", token);
-        }
-
-        Ok(())
-    }
-}
-
 impl<'a> Scanner<'a> {
     pub fn tokens(self) -> Vec<Token> {
         self.tokens
@@ -60,11 +49,16 @@ impl<'a> Scanner<'a> {
     }
 }
 
-// impl<'a> From<String> for Scanner<'a> {
-//     fn from(source: String) -> Self {
-//         Self::from(source.as_str())
-//     }
-// }
+impl<'a> Display for Scanner<'a> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        // let mut display_string = String::new();
+        for token in &self.tokens {
+            let _ = writeln!(f, "{}", token);
+        }
+
+        Ok(())
+    }
+}
 
 impl<'a> From<&'a str> for Scanner<'a> {
     fn from(source: &'a str) -> Self {

@@ -1,32 +1,43 @@
 #![allow(unused_variables)]
-use std::env;
+use clap::Parser;
+use clap::Subcommand;
 use std::fs;
+use std::path::PathBuf;
 use std::process::exit;
 
-use lox_interpreter::*;
+use codecrafters_interpreter::*;
 
-fn main() {
-    let args: Vec<String> = env::args().collect();
-    if args.len() < 3 {
-        eprintln!("Usage: {} tokenize <filename>", args[0]);
-        return;
-    }
+#[derive(Parser)]
+#[command(version)]
+struct Cli {
+    #[command(subcommand)]
+    command: Commands,
+}
 
-    let command = &args[1];
-    let filename = &args[2];
+#[derive(Subcommand)]
+enum Commands {
+    Tokenize { file_path: PathBuf },
+    Parse { file_path: PathBuf },
+}
 
-    let file_contents = fs::read_to_string(filename).unwrap_or_else(|_| {
-        eprintln!("Failed to read file {}", filename);
+fn file_contents(path: &PathBuf) -> String {
+    fs::read_to_string(path).unwrap_or_else(|_| {
+        eprintln!("Failed to read file {:?}", path);
         String::new()
-    });
+    })
+}
 
-    match command.as_str() {
-        "parse" => {
-            let mut parser = Parser::from(file_contents.as_str());
-            //    parser.parse().print_ast();
-        }
-        "tokenize" => {
-            let scanner = Scanner::from(file_contents.as_str());
+fn main() -> anyhow::Result<()> {
+    // TODO: use clap
+
+    let cli = Cli::parse();
+
+    // You can check for the existence of subcommands, and if found use their
+    // matches just as you would the top level cmd
+    match &cli.command {
+        Commands::Tokenize { file_path } => {
+            let source = file_contents(file_path);
+            let scanner = Scanner::from(source.as_str());
 
             print!("{}", scanner);
 
@@ -34,8 +45,20 @@ fn main() {
                 exit(65);
             }
         }
-        _ => {
-            eprintln!("Unknown command: {}", command);
+        Commands::Parse { file_path } => {
+            let source = file_contents(file_path);
+            let scanner = Scanner::from(source.as_str());
+            let mut parser = codecrafters_interpreter::Parser::new(&scanner.tokens());
+
+            match parser.parse() {
+                Ok(expr) => expr.print_ast(),
+                Err(e) => {
+                    eprintln!("{}", e);
+                    exit(65)
+                }
+            }
         }
     }
+
+    Ok(())
 }

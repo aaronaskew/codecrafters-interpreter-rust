@@ -1,5 +1,7 @@
 use std::{fmt::Display, process::exit};
 
+use thiserror::Error;
+
 use crate::{
     scan::Scanner,
     token::{LiteralKind, Token, TokenKind},
@@ -161,8 +163,14 @@ impl Display for Expr {
     }
 }
 
-#[derive(Debug)]
-struct ParseError {}
+#[derive(Debug, Error)]
+pub struct ParseError(String);
+
+impl Display for ParseError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.0)
+    }
+}
 
 #[derive(Debug)]
 pub struct Parser {
@@ -181,6 +189,13 @@ pub struct Parser {
 //                | "(" expression ")" ;
 
 impl Parser {
+    pub fn new(tokens: &[Token]) -> Self {
+        Self {
+            tokens: tokens.to_vec(),
+            current: 0,
+        }
+    }
+
     pub fn parse(&mut self) -> Result<Expr, ParseError> {
         let expr = self.expression()?;
 
@@ -363,21 +378,6 @@ impl Parser {
             }
         }
 
-        unreachable!("primary should not reach this point")
-    }
-}
-
-impl From<Scanner<'_>> for Parser {
-    fn from(scanner: Scanner) -> Self {
-        Self {
-            tokens: scanner.tokens(),
-            current: 0,
-        }
-    }
-}
-
-impl From<String> for Parser {
-    fn from(value: String) -> Self {
-        Self::from(Scanner::from(value))
+        Err(ParseError("primary should not reach this point".into()))
     }
 }
