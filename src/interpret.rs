@@ -55,7 +55,46 @@ impl Interpreter {
                     }
                 }
             }
-            Expr::Binary { .. } => todo!(),
+            Expr::Binary {
+                left,
+                operator,
+                right,
+            } => {
+                let left_val = self.visit(left);
+                let right_val = self.visit(right);
+
+                match operator {
+                    crate::Operator::Equivalent => todo!(),
+                    crate::Operator::NotEquivalent => todo!(),
+                    crate::Operator::LessThan => todo!(),
+                    crate::Operator::LessThanOrEquals => todo!(),
+                    crate::Operator::GreaterThan => todo!(),
+                    crate::Operator::GreaterThanOrEquals => todo!(),
+                    crate::Operator::Plus => todo!(),
+                    crate::Operator::Minus => todo!(),
+                    crate::Operator::Multiply => {
+                        let Value::Number(left) = left_val else {
+                            panic!()
+                        };
+                        let Value::Number(right) = right_val else {
+                            panic!()
+                        };
+
+                        Value::Number(left * right)
+                    }
+                    crate::Operator::Divide => {
+                        let Value::Number(left) = left_val else {
+                            panic!()
+                        };
+                        let Value::Number(right) = right_val else {
+                            panic!()
+                        };
+
+                        Value::Number(left / right)
+                    }
+                    crate::Operator::Not => todo!(),
+                }
+            }
             Expr::Grouping { expr } => self.visit(expr),
         }
     }
