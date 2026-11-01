@@ -2,10 +2,7 @@ use std::{fmt::Display, process::exit};
 
 use thiserror::Error;
 
-use crate::{
-    scan::Scanner,
-    token::{LiteralKind, Token, TokenKind},
-};
+use crate::token::{LiteralKind, Token, TokenKind};
 
 // expression     → literal
 //                | unary
@@ -46,14 +43,14 @@ impl Display for ExprLiteral {
 
 #[derive(Debug)]
 pub enum Operator {
-    Equals,
-    NotEquals,
+    Equivalent,
+    NotEquivalent,
     LessThan,
     LessThanOrEquals,
     GreaterThan,
     GreaterThanOrEquals,
-    Add,
-    Subtract,
+    Plus,
+    Minus,
     Multiply,
     Divide,
     Not,
@@ -62,14 +59,14 @@ pub enum Operator {
 impl From<Token> for Operator {
     fn from(token: Token) -> Self {
         match token.kind {
-            TokenKind::EQUAL_EQUAL => Self::Equals,
-            TokenKind::BANG_EQUAL => Self::NotEquals,
+            TokenKind::EQUAL_EQUAL => Self::Equivalent,
+            TokenKind::BANG_EQUAL => Self::NotEquivalent,
             TokenKind::LESS => Self::LessThan,
             TokenKind::LESS_EQUAL => Self::LessThanOrEquals,
             TokenKind::GREATER => Self::GreaterThan,
             TokenKind::GREATER_EQUAL => Self::GreaterThanOrEquals,
-            TokenKind::PLUS => Self::Add,
-            TokenKind::MINUS => Self::Subtract,
+            TokenKind::PLUS => Self::Plus,
+            TokenKind::MINUS => Self::Minus,
             TokenKind::STAR => Self::Multiply,
             TokenKind::SLASH => Self::Divide,
             TokenKind::BANG => Self::Not,
@@ -84,14 +81,14 @@ impl Display for Operator {
             f,
             "{}",
             match self {
-                Operator::Equals => "==",
-                Operator::NotEquals => "!=",
+                Operator::Equivalent => "==",
+                Operator::NotEquivalent => "!=",
                 Operator::LessThan => "<",
                 Operator::LessThanOrEquals => "<=",
                 Operator::GreaterThan => ">",
                 Operator::GreaterThanOrEquals => ">=",
-                Operator::Add => "+",
-                Operator::Subtract => "-",
+                Operator::Plus => "+",
+                Operator::Minus => "-",
                 Operator::Multiply => "*",
                 Operator::Divide => "/",
                 Operator::Not => "!",
@@ -149,15 +146,18 @@ impl Display for Expr {
             "{}",
             match self {
                 Expr::Literal(literal) => literal.to_string(),
-                Expr::Unary { operator, right } => {
+                Expr::Unary {
+                    operator: _,
+                    right: _,
+                } => {
                     self.parenthesize()
                 }
                 Expr::Binary {
-                    left,
-                    operator,
-                    right,
+                    left: _,
+                    operator: _,
+                    right: _,
                 } => self.parenthesize(),
-                Expr::Grouping { expr } => self.parenthesize(),
+                Expr::Grouping { expr: _ } => self.parenthesize(),
             }
         )
     }

@@ -38,24 +38,24 @@ impl Interpreter {
                 crate::ExprLiteral::Nil => Value::Nil,
             },
 
-            Expr::Unary { operator, right } => match operator {
-                crate::Operator::Equals => todo!(),
-                crate::Operator::NotEquals => todo!(),
-                crate::Operator::LessThan => todo!(),
-                crate::Operator::LessThanOrEquals => todo!(),
-                crate::Operator::GreaterThan => todo!(),
-                crate::Operator::GreaterThanOrEquals => todo!(),
-                crate::Operator::Add => todo!(),
-                crate::Operator::Subtract => todo!(),
-                crate::Operator::Multiply => todo!(),
-                crate::Operator::Divide => todo!(),
-                crate::Operator::Not => todo!(),
-            },
-            Expr::Binary {
-                left,
-                operator,
-                right,
-            } => todo!(),
+            Expr::Unary { operator, right } => {
+                let right_val = self.visit(right);
+
+                match operator {
+                    crate::Operator::Minus => {
+                        let Value::Number(n) = right_val else {
+                            panic!()
+                        };
+
+                        Value::Number(-n)
+                    }
+                    crate::Operator::Not => Value::Boolean(!right_val.is_truthy()),
+                    _ => {
+                        panic!()
+                    }
+                }
+            }
+            Expr::Binary { .. } => todo!(),
             Expr::Grouping { expr } => self.visit(expr),
         }
     }
@@ -67,6 +67,19 @@ pub enum Value {
     Nil,
     Number(f64),
     String(String),
+}
+impl Value {
+    fn is_truthy(&self) -> bool {
+        if matches!(self, Value::Nil) {
+            return false;
+        }
+
+        if let Value::Boolean(b) = self {
+            return *b;
+        }
+
+        true
+    }
 }
 
 impl Display for Value {
