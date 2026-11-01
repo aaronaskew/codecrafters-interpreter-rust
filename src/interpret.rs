@@ -38,7 +38,19 @@ impl Interpreter {
                 crate::ExprLiteral::Nil => Value::Nil,
             },
 
-            Expr::Unary { operator, right } => todo!(),
+            Expr::Unary { operator, right } => match operator {
+                crate::Operator::Equals => todo!(),
+                crate::Operator::NotEquals => todo!(),
+                crate::Operator::LessThan => todo!(),
+                crate::Operator::LessThanOrEquals => todo!(),
+                crate::Operator::GreaterThan => todo!(),
+                crate::Operator::GreaterThanOrEquals => todo!(),
+                crate::Operator::Add => todo!(),
+                crate::Operator::Subtract => todo!(),
+                crate::Operator::Multiply => todo!(),
+                crate::Operator::Divide => todo!(),
+                crate::Operator::Not => todo!(),
+            },
             Expr::Binary {
                 left,
                 operator,

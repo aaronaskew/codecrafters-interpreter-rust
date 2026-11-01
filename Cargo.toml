@@ -1,9 +1,11 @@
 [package]
 name = "codecrafters-interpreter"
 version = "0.1.0"
-authors = ["Aaron Askew <aaronaskew@gmail.com>"]
 edition = "2024"
 rust-version = "1.96"
+
+[lib]
+name = "lox_interpreter"
 
 [dependencies]
 itertools = "0.15"

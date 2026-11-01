@@ -5,7 +5,7 @@ use std::fs;
 use std::path::PathBuf;
 use std::process::exit;
 
-use codecrafters_interpreter::*;
+use lox_interpreter::*;
 
 #[derive(Parser)]
 #[command(version)]
@@ -49,7 +49,7 @@ fn main() -> anyhow::Result<()> {
         Commands::Parse { file_path } => {
             let source = file_contents(file_path);
             let scanner = Scanner::from(source.as_str());
-            let mut parser = codecrafters_interpreter::Parser::new(&scanner.tokens());
+            let mut parser = lox_interpreter::Parser::new(&scanner.tokens());
 
             match parser.parse() {
                 Ok(expr) => expr.print_ast(),
@@ -59,7 +59,7 @@ fn main() -> anyhow::Result<()> {
         Commands::Evaluate { file_path } => {
             let source = file_contents(file_path);
             let scanner = Scanner::from(source.as_str());
-            let mut parser = codecrafters_interpreter::Parser::new(&scanner.tokens());
+            let mut parser = lox_interpreter::Parser::new(&scanner.tokens());
 
             match parser.parse() {
                 Ok(expr) => {
