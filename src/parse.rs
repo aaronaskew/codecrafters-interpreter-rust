@@ -2,166 +2,11 @@ use std::{fmt::Display, process::exit};
 
 use thiserror::Error;
 
-use crate::token::{LiteralKind, Token, TokenKind};
+pub(crate) use crate::expr::*;
 
-// expression     → literal
-//                | unary
-//                | binary
-//                | grouping ;
-//
-// literal        → NUMBER | STRING | "true" | "false" | "nil" ;
-// grouping       → "(" expression ")" ;
-// unary          → ( "-" | "!" ) expression ;
-// binary         → expression operator expression ;
-// operator       → "==" | "!=" | "<" | "<=" | ">" | ">="
-//                | "+"  | "-"  | "*" | "/" ;
+use crate::token::{Token, TokenKind};
 
-#[derive(Debug)]
-pub enum ExprLiteral {
-    Number(LiteralKind),
-    String(LiteralKind),
-    True,
-    False,
-    Nil,
-}
-
-impl Display for ExprLiteral {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(
-            f,
-            "{}",
-            match self {
-                ExprLiteral::Number(literal_kind) | ExprLiteral::String(literal_kind) =>
-                    literal_kind.to_string(),
-                ExprLiteral::True => true.to_string(),
-                ExprLiteral::False => false.to_string(),
-                ExprLiteral::Nil => "nil".to_string(),
-            }
-        )
-    }
-}
-
-#[derive(Debug)]
-pub enum Operator {
-    Equivalent,
-    NotEquivalent,
-    LessThan,
-    LessThanOrEquals,
-    GreaterThan,
-    GreaterThanOrEquals,
-    Plus,
-    Minus,
-    Multiply,
-    Divide,
-    Not,
-}
-
-impl From<Token> for Operator {
-    fn from(token: Token) -> Self {
-        match token.kind {
-            TokenKind::EQUAL_EQUAL => Self::Equivalent,
-            TokenKind::BANG_EQUAL => Self::NotEquivalent,
-            TokenKind::LESS => Self::LessThan,
-            TokenKind::LESS_EQUAL => Self::LessThanOrEquals,
-            TokenKind::GREATER => Self::GreaterThan,
-            TokenKind::GREATER_EQUAL => Self::GreaterThanOrEquals,
-            TokenKind::PLUS => Self::Plus,
-            TokenKind::MINUS => Self::Minus,
-            TokenKind::STAR => Self::Multiply,
-            TokenKind::SLASH => Self::Divide,
-            TokenKind::BANG => Self::Not,
-            _ => unreachable!("Not an operator"),
-        }
-    }
-}
-
-impl Display for Operator {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(
-            f,
-            "{}",
-            match self {
-                Operator::Equivalent => "==",
-                Operator::NotEquivalent => "!=",
-                Operator::LessThan => "<",
-                Operator::LessThanOrEquals => "<=",
-                Operator::GreaterThan => ">",
-                Operator::GreaterThanOrEquals => ">=",
-                Operator::Plus => "+",
-                Operator::Minus => "-",
-                Operator::Multiply => "*",
-                Operator::Divide => "/",
-                Operator::Not => "!",
-            }
-        )
-    }
-}
-
-#[derive(Debug)]
-pub enum Expr {
-    Literal(ExprLiteral),
-    Unary {
-        operator: Operator,
-        right: Box<Expr>,
-    },
-    Binary {
-        left: Box<Expr>,
-        operator: Operator,
-        right: Box<Expr>,
-    },
-    Grouping {
-        expr: Box<Expr>,
-    },
-}
-
-impl Expr {
-    pub fn print_ast(&self) {
-        println!("{self}");
-    }
-
-    fn parenthesize(&self) -> String {
-        (match self {
-            Expr::Literal(expr_literal) => expr_literal.to_string(),
-            Expr::Unary { operator, right } => format!("({} {})", operator, right.parenthesize()),
-            Expr::Binary {
-                left,
-                operator,
-                right,
-            } => format!(
-                "({} {} {})",
-                operator,
-                left.parenthesize(),
-                right.parenthesize()
-            ),
-            Expr::Grouping { expr } => format!("(group {})", expr.parenthesize()),
-        })
-        .to_string()
-    }
-}
-
-impl Display for Expr {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(
-            f,
-            "{}",
-            match self {
-                Expr::Literal(literal) => literal.to_string(),
-                Expr::Unary {
-                    operator: _,
-                    right: _,
-                } => {
-                    self.parenthesize()
-                }
-                Expr::Binary {
-                    left: _,
-                    operator: _,
-                    right: _,
-                } => self.parenthesize(),
-                Expr::Grouping { expr: _ } => self.parenthesize(),
-            }
-        )
-    }
-}
+pub(crate) mod expr;
 
 #[derive(Debug, Error)]
 pub struct ParseError;
@@ -265,7 +110,7 @@ impl Parser {
         let mut expr = self.comparison()?;
 
         while self.match_token(&[TokenKind::EQUAL_EQUAL, TokenKind::BANG_EQUAL]) {
-            let operator = Operator::from(self.previous());
+            let operator = self.previous();
             let right = self.comparison()?;
             expr = Expr::Binary {
                 left: expr.into(),
@@ -287,7 +132,7 @@ impl Parser {
             TokenKind::GREATER,
             TokenKind::GREATER_EQUAL,
         ]) {
-            let operator = Operator::from(self.previous());
+            let operator = self.previous();
             let right = self.term()?;
             expr = Expr::Binary {
                 left: expr.into(),
@@ -303,7 +148,7 @@ impl Parser {
         let mut expr = self.factor()?;
 
         while self.match_token(&[TokenKind::PLUS, TokenKind::MINUS]) {
-            let operator = Operator::from(self.previous());
+            let operator = self.previous();
             let right = self.factor()?;
             expr = Expr::Binary {
                 left: expr.into(),
@@ -318,7 +163,7 @@ impl Parser {
         let mut expr = self.unary()?;
 
         while self.match_token(&[TokenKind::SLASH, TokenKind::STAR]) {
-            let operator = Operator::from(self.previous());
+            let operator = self.previous();
             let right = self.unary()?;
             expr = Expr::Binary {
                 left: expr.into(),
@@ -333,7 +178,7 @@ impl Parser {
         // eprintln!("==unary== current token_kind: {:?}", self.peek().kind);
 
         if self.match_token(&[TokenKind::BANG, TokenKind::MINUS]) {
-            let operator = Operator::from(self.previous());
+            let operator = self.previous();
             let right = self.unary()?;
 
             Ok(Expr::Unary {
