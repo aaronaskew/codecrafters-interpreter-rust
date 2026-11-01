@@ -29,12 +29,8 @@ fn file_contents(path: &PathBuf) -> String {
 }
 
 fn main() -> anyhow::Result<()> {
-    // TODO: use clap
-
     let cli = Cli::parse();
 
-    // You can check for the existence of subcommands, and if found use their
-    // matches just as you would the top level cmd
     match &cli.command {
         Commands::Tokenize { file_path } => {
             let source = file_contents(file_path);

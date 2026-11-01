@@ -67,7 +67,6 @@ impl Parser {
     }
 
     fn advance(&mut self) -> Token {
-        // eprintln!("begin advance() {:#?}", self);
         if !self.is_at_end() {
             self.current += 1;
         }
@@ -102,11 +101,9 @@ impl Parser {
     }
 
     fn expression(&mut self) -> Result<Expr, ParseError> {
-        // eprintln!("==expression== current token_kind: {:?}", self.peek().kind);
         self.equality()
     }
     fn equality(&mut self) -> Result<Expr, ParseError> {
-        // eprintln!("==equality== current token_kind: {:?}", self.peek().kind);
         let mut expr = self.comparison()?;
 
         while self.match_token(&[TokenKind::EQUAL_EQUAL, TokenKind::BANG_EQUAL]) {
@@ -123,7 +120,6 @@ impl Parser {
     }
 
     fn comparison(&mut self) -> Result<Expr, ParseError> {
-        // eprintln!("==comparision== current token_kind: {:?}", self.peek().kind);
         let mut expr = self.term()?;
 
         while self.match_token(&[
@@ -144,7 +140,6 @@ impl Parser {
         Ok(expr)
     }
     fn term(&mut self) -> Result<Expr, ParseError> {
-        // eprintln!("==term== current token_kind: {:?}", self.peek().kind);
         let mut expr = self.factor()?;
 
         while self.match_token(&[TokenKind::PLUS, TokenKind::MINUS]) {
@@ -159,7 +154,6 @@ impl Parser {
         Ok(expr)
     }
     fn factor(&mut self) -> Result<Expr, ParseError> {
-        // eprintln!("==factor== current token_kind: {:?}", self.peek().kind);
         let mut expr = self.unary()?;
 
         while self.match_token(&[TokenKind::SLASH, TokenKind::STAR]) {
@@ -175,8 +169,6 @@ impl Parser {
     }
 
     fn unary(&mut self) -> Result<Expr, ParseError> {
-        // eprintln!("==unary== current token_kind: {:?}", self.peek().kind);
-
         if self.match_token(&[TokenKind::BANG, TokenKind::MINUS]) {
             let operator = self.previous();
             let right = self.unary()?;
@@ -191,8 +183,6 @@ impl Parser {
     }
 
     fn primary(&mut self) -> Result<Expr, ParseError> {
-        // eprintln!("==primary== current token_kind: {:?}", self.peek().kind);
-
         if self.match_token(&[TokenKind::TRUE]) {
             return Ok(Expr::Literal(ExprLiteral::True));
         } else if self.match_token(&[TokenKind::FALSE]) {

@@ -39,62 +39,6 @@ impl Display for ExprLiteral {
     }
 }
 
-// #[derive(Debug)]
-// pub enum Operator {
-//     Equivalent,
-//     NotEquivalent,
-//     LessThan,
-//     LessThanOrEquals,
-//     GreaterThan,
-//     GreaterThanOrEquals,
-//     Plus,
-//     Minus,
-//     Multiply,
-//     Divide,
-//     Not,
-// }
-//
-// impl From<Token> for Operator {
-//     fn from(token: Token) -> Self {
-//         match token.kind {
-//             TokenKind::EQUAL_EQUAL => Self::Equivalent,
-//             TokenKind::BANG_EQUAL => Self::NotEquivalent,
-//             TokenKind::LESS => Self::LessThan,
-//             TokenKind::LESS_EQUAL => Self::LessThanOrEquals,
-//             TokenKind::GREATER => Self::GreaterThan,
-//             TokenKind::GREATER_EQUAL => Self::GreaterThanOrEquals,
-//             TokenKind::PLUS => Self::Plus,
-//             TokenKind::MINUS => Self::Minus,
-//             TokenKind::STAR => Self::Multiply,
-//             TokenKind::SLASH => Self::Divide,
-//             TokenKind::BANG => Self::Not,
-//             _ => unreachable!("Not an operator"),
-//         }
-//     }
-// }
-
-// impl Display for Operator {
-//     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-//         write!(
-//             f,
-//             "{}",
-//             match self {
-//                 Token{kind: TokenKind::} => "==",
-//                 Token{kind: TokenKind::} => "!=",
-//                 Token{kind: TokenKind::} => "<",
-//                 Token{kind: TokenKind::} => "<=",
-//                 Token{kind: TokenKind::} => ">",
-//                 Token{kind: TokenKind::} => ">=",
-//                 Token{kind: TokenKind::} => "+",
-//                 Token{kind: TokenKind::} => "-",
-//                 Token{kind: TokenKind::} => "*",
-//                 Token{kind: TokenKind::} => "/",
-//                 Token{kind: TokenKind::} => "!",
-//             }
-//         )
-//     }
-// }
-
 #[derive(Debug)]
 pub enum Expr {
     Literal(ExprLiteral),

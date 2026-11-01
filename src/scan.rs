@@ -51,7 +51,6 @@ impl<'a> Scanner<'a> {
 
 impl<'a> Display for Scanner<'a> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        // let mut display_string = String::new();
         for token in &self.tokens {
             let _ = writeln!(f, "{}", token);
         }
@@ -286,8 +285,6 @@ impl<'a> From<&'a str> for Scanner<'a> {
                     literal,
                     location: scanner.location,
                 };
-
-                // eprintln!("token: {}", token);
 
                 scanner.tokens.push(token);
             }

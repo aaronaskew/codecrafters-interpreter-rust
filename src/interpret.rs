@@ -211,14 +211,6 @@ impl Value {
 
         true
     }
-
-    // fn check_number_operand(&self) -> Result<f64,RuntimeError> {
-    //     let Value::Number(num) = self else {
-    //         return Err(RuntimeError { msg: "Operand must be a number.", token: self. })
-    //     };
-    //
-    //     Ok(*num)
-    // }
 }
 
 impl Display for Value {
