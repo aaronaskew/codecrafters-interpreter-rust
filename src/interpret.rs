@@ -64,29 +64,12 @@ impl Interpreter {
                 let right_val = self.visit(right);
 
                 match operator {
-                    Operator::Equivalent => todo!(),
-                    Operator::NotEquivalent => todo!(),
-                    Operator::LessThan
-                    | Operator::LessThanOrEquals
-                    | Operator::GreaterThan
-                    | Operator::GreaterThanOrEquals => {
-                        let Value::Number(left) = left_val else {
-                            panic!()
-                        };
-                        let Value::Number(right) = right_val else {
-                            panic!()
-                        };
-
-                        Value::Boolean(match operator {
-                            Operator::LessThan => left < right,
-                            Operator::LessThanOrEquals => left <= right,
-                            Operator::GreaterThan => left > right,
-                            Operator::GreaterThanOrEquals => left >= right,
-                            _ => {
-                                panic!()
-                            }
-                        })
-                    }
+                    Operator::Equivalent => Value::Boolean(left_val == right_val),
+                    Operator::NotEquivalent => Value::Boolean(left_val != right_val),
+                    Operator::LessThan => Value::Boolean(left_val < right_val),
+                    Operator::LessThanOrEquals => Value::Boolean(left_val <= right_val),
+                    Operator::GreaterThan => Value::Boolean(left_val > right_val),
+                    Operator::GreaterThanOrEquals => Value::Boolean(left_val >= right_val),
                     Operator::Plus => match (left_val, right_val) {
                         (Value::Number(left), Value::Number(right)) => Value::Number(left + right),
                         (Value::String(left), Value::String(right)) => {
@@ -134,13 +117,23 @@ impl Interpreter {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub enum Value {
     Boolean(bool),
     Nil,
     Number(f64),
     String(String),
 }
+
+impl PartialOrd for Value {
+    fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
+        match (self, other) {
+            (Value::Number(s), Value::Number(o)) => Some(s.total_cmp(o)),
+            _ => None,
+        }
+    }
+}
+
 impl Value {
     fn is_truthy(&self) -> bool {
         if matches!(self, Value::Nil) {
