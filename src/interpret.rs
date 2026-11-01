@@ -95,77 +95,88 @@ impl Interpreter {
                 left,
                 operator,
                 right,
-            } => {
-                let left_val = Self::visit(left)?;
-                let right_val = Self::visit(right)?;
-
-                match operator {
-                    Token {
-                        kind: TokenKind::EQUAL_EQUAL,
-                        ..
-                    } => Ok(Value::Boolean(left_val == right_val)),
-                    Token {
-                        kind: TokenKind::BANG_EQUAL,
-                        ..
-                    } => Ok(Value::Boolean(left_val != right_val)),
-                    Token {
-                        kind: TokenKind::LESS,
-                        ..
-                    } => Ok(Value::Boolean(left_val < right_val)),
-                    Token {
-                        kind: TokenKind::LESS_EQUAL,
-                        ..
-                    } => Ok(Value::Boolean(left_val <= right_val)),
-                    Token {
-                        kind: TokenKind::GREATER,
-                        ..
-                    } => Ok(Value::Boolean(left_val > right_val)),
-                    Token {
-                        kind: TokenKind::GREATER_EQUAL,
-                        ..
-                    } => Ok(Value::Boolean(left_val >= right_val)),
-                    Token {
-                        kind: TokenKind::PLUS,
-                        ..
-                    } => match (left_val, right_val) {
-                        (Value::Number(left), Value::Number(right)) => {
-                            Ok(Value::Number(left + right))
-                        }
-                        (Value::String(left), Value::String(right)) => {
-                            Ok(Value::String(format!("{}{}", left, right)))
-                        }
-                        _ => Err(RuntimeError::new(
-                            "Operands must be two numbers or two strings.",
-                            operator,
-                        )),
-                    },
-                    Token {
-                        kind: TokenKind::MINUS,
-                        ..
-                    } => {
-                        let (left, right) = Self::check_number_operands(operator, left, right)?;
-
-                        Ok(Value::Number(left - right))
-                    }
-                    Token {
-                        kind: TokenKind::STAR,
-                        ..
-                    } => {
-                        let (left, right) = Self::check_number_operands(operator, left, right)?;
-
-                        Ok(Value::Number(left * right))
-                    }
-                    Token {
-                        kind: TokenKind::SLASH,
-                        ..
-                    } => {
-                        let (left, right) = Self::check_number_operands(operator, left, right)?;
-
-                        Ok(Value::Number(left / right))
-                    }
-                    _ => panic!("not a binary operator"),
+            } => match operator {
+                Token {
+                    kind: TokenKind::EQUAL_EQUAL,
+                    ..
+                } => {
+                    let (left_val, right_val) = (Self::visit(left)?, Self::visit(right)?);
+                    Ok(Value::Boolean(left_val == right_val))
                 }
-            }
+                Token {
+                    kind: TokenKind::BANG_EQUAL,
+                    ..
+                } => {
+                    let (left_val, right_val) = (Self::visit(left)?, Self::visit(right)?);
+                    Ok(Value::Boolean(left_val != right_val))
+                }
+                Token {
+                    kind: TokenKind::LESS,
+                    ..
+                } => {
+                    let (left_val, right_val) = Self::check_number_operands(operator, left, right)?;
+                    Ok(Value::Boolean(left_val < right_val))
+                }
+                Token {
+                    kind: TokenKind::LESS_EQUAL,
+                    ..
+                } => {
+                    let (left_val, right_val) = Self::check_number_operands(operator, left, right)?;
+                    Ok(Value::Boolean(left_val <= right_val))
+                }
+                Token {
+                    kind: TokenKind::GREATER,
+                    ..
+                } => {
+                    let (left_val, right_val) = Self::check_number_operands(operator, left, right)?;
+                    Ok(Value::Boolean(left_val > right_val))
+                }
+                Token {
+                    kind: TokenKind::GREATER_EQUAL,
+                    ..
+                } => {
+                    let (left_val, right_val) = Self::check_number_operands(operator, left, right)?;
+                    Ok(Value::Boolean(left_val >= right_val))
+                }
+                Token {
+                    kind: TokenKind::PLUS,
+                    ..
+                } => match (Self::visit(left)?, Self::visit(right)?) {
+                    (Value::Number(left), Value::Number(right)) => Ok(Value::Number(left + right)),
+                    (Value::String(left), Value::String(right)) => {
+                        Ok(Value::String(format!("{}{}", left, right)))
+                    }
+                    _ => Err(RuntimeError::new(
+                        "Operands must be two numbers or two strings.",
+                        operator,
+                    )),
+                },
+                Token {
+                    kind: TokenKind::MINUS,
+                    ..
+                } => {
+                    let (left, right) = Self::check_number_operands(operator, left, right)?;
+
+                    Ok(Value::Number(left - right))
+                }
+                Token {
+                    kind: TokenKind::STAR,
+                    ..
+                } => {
+                    let (left, right) = Self::check_number_operands(operator, left, right)?;
+
+                    Ok(Value::Number(left * right))
+                }
+                Token {
+                    kind: TokenKind::SLASH,
+                    ..
+                } => {
+                    let (left, right) = Self::check_number_operands(operator, left, right)?;
+
+                    Ok(Value::Number(left / right))
+                }
+                _ => Err(RuntimeError::new("Not a binary operator", operator)),
+            },
             Expr::Grouping { expr } => Self::visit(expr),
         }
     }
