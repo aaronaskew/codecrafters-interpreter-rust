@@ -134,9 +134,10 @@ impl Interpreter {
                         (Value::String(left), Value::String(right)) => {
                             Ok(Value::String(format!("{}{}", left, right)))
                         }
-                        _ => {
-                            panic!();
-                        }
+                        _ => Err(RuntimeError::new(
+                            "Operands must be two numbers or two strings.",
+                            operator,
+                        )),
                     },
                     Token {
                         kind: TokenKind::MINUS,
