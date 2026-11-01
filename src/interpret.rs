@@ -1,6 +1,6 @@
 use std::fmt::Display;
 
-use crate::{Expr, token::LiteralKind};
+use crate::{Expr, Operator, token::LiteralKind};
 
 #[derive(Debug)]
 pub struct Interpreter {
@@ -42,14 +42,14 @@ impl Interpreter {
                 let right_val = self.visit(right);
 
                 match operator {
-                    crate::Operator::Minus => {
+                    Operator::Minus => {
                         let Value::Number(n) = right_val else {
                             panic!()
                         };
 
                         Value::Number(-n)
                     }
-                    crate::Operator::Not => Value::Boolean(!right_val.is_truthy()),
+                    Operator::Not => Value::Boolean(!right_val.is_truthy()),
                     _ => {
                         panic!()
                     }
@@ -64,13 +64,30 @@ impl Interpreter {
                 let right_val = self.visit(right);
 
                 match operator {
-                    crate::Operator::Equivalent => todo!(),
-                    crate::Operator::NotEquivalent => todo!(),
-                    crate::Operator::LessThan => todo!(),
-                    crate::Operator::LessThanOrEquals => todo!(),
-                    crate::Operator::GreaterThan => todo!(),
-                    crate::Operator::GreaterThanOrEquals => todo!(),
-                    crate::Operator::Plus => match (left_val, right_val) {
+                    Operator::Equivalent => todo!(),
+                    Operator::NotEquivalent => todo!(),
+                    Operator::LessThan
+                    | Operator::LessThanOrEquals
+                    | Operator::GreaterThan
+                    | Operator::GreaterThanOrEquals => {
+                        let Value::Number(left) = left_val else {
+                            panic!()
+                        };
+                        let Value::Number(right) = right_val else {
+                            panic!()
+                        };
+
+                        Value::Boolean(match operator {
+                            Operator::LessThan => left < right,
+                            Operator::LessThanOrEquals => left <= right,
+                            Operator::GreaterThan => left > right,
+                            Operator::GreaterThanOrEquals => left >= right,
+                            _ => {
+                                panic!()
+                            }
+                        })
+                    }
+                    Operator::Plus => match (left_val, right_val) {
                         (Value::Number(left), Value::Number(right)) => Value::Number(left + right),
                         (Value::String(left), Value::String(right)) => {
                             Value::String(format!("{}{}", left, right))
@@ -79,7 +96,7 @@ impl Interpreter {
                             panic!();
                         }
                     },
-                    crate::Operator::Minus => {
+                    Operator::Minus => {
                         let Value::Number(left) = left_val else {
                             panic!()
                         };
@@ -89,7 +106,7 @@ impl Interpreter {
 
                         Value::Number(left - right)
                     }
-                    crate::Operator::Multiply => {
+                    Operator::Multiply => {
                         let Value::Number(left) = left_val else {
                             panic!()
                         };
@@ -99,7 +116,7 @@ impl Interpreter {
 
                         Value::Number(left * right)
                     }
-                    crate::Operator::Divide => {
+                    Operator::Divide => {
                         let Value::Number(left) = left_val else {
                             panic!()
                         };
@@ -109,7 +126,7 @@ impl Interpreter {
 
                         Value::Number(left / right)
                     }
-                    crate::Operator::Not => todo!(),
+                    Operator::Not => todo!(),
                 }
             }
             Expr::Grouping { expr } => self.visit(expr),
