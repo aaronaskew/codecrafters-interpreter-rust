@@ -70,8 +70,28 @@ impl Interpreter {
                     crate::Operator::LessThanOrEquals => todo!(),
                     crate::Operator::GreaterThan => todo!(),
                     crate::Operator::GreaterThanOrEquals => todo!(),
-                    crate::Operator::Plus => todo!(),
-                    crate::Operator::Minus => todo!(),
+                    crate::Operator::Plus => {
+                        //TODO: handle strings
+
+                        let Value::Number(left) = left_val else {
+                            panic!()
+                        };
+                        let Value::Number(right) = right_val else {
+                            panic!()
+                        };
+
+                        Value::Number(left + right)
+                    }
+                    crate::Operator::Minus => {
+                        let Value::Number(left) = left_val else {
+                            panic!()
+                        };
+                        let Value::Number(right) = right_val else {
+                            panic!()
+                        };
+
+                        Value::Number(left - right)
+                    }
                     crate::Operator::Multiply => {
                         let Value::Number(left) = left_val else {
                             panic!()
