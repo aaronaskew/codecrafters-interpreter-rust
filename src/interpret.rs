@@ -3,33 +3,39 @@ use std::{fmt::Display, process::exit};
 use thiserror::Error;
 
 use crate::{
-    Expr, RUNTIME_ERROR_EXIT_CODE, Stmt,
+    RUNTIME_ERROR_EXIT_CODE,
+    environment::Environment,
+    grammar::{Expr, ExprLiteral, Stmt},
     token::{LiteralKind, Token, TokenKind},
 };
 
 #[derive(Debug)]
-pub struct Interpreter {}
+pub struct Interpreter {
+    environment: Environment,
+}
 
 impl Interpreter {
     pub fn new() -> Self {
-        Self {}
-    }
-
-    pub fn interpret(statements: Vec<Stmt>) {
-        for stmt in &statements {
-            Self::execute(stmt);
+        Self {
+            environment: Environment::default(),
         }
     }
 
-    fn execute(stmt: &Stmt) {
-        if let Err(e) = Self::visit_stmt(stmt) {
+    pub fn interpret(&mut self, statements: Vec<Stmt>) {
+        for stmt in &statements {
+            self.execute(stmt);
+        }
+    }
+
+    fn execute(&mut self, stmt: &Stmt) {
+        if let Err(e) = self.visit_stmt(stmt) {
             eprintln!("{}", e);
             exit(RUNTIME_ERROR_EXIT_CODE);
         }
     }
 
-    pub fn evaluate(expr: &Expr) -> Value {
-        match Self::visit_expr(expr) {
+    pub fn evaluate(&mut self, expr: &Expr) -> Value {
+        match self.visit_expr(expr) {
             Ok(v) => v,
             Err(e) => {
                 eprintln!("{}", e);
@@ -38,15 +44,15 @@ impl Interpreter {
         }
     }
 
-    fn is_truthy(expr: &Expr) -> bool {
-        match Self::visit_expr(expr) {
+    fn is_truthy(&mut self, expr: &Expr) -> bool {
+        match self.visit_expr(expr) {
             Ok(v) => v.is_truthy(),
             Err(_) => false,
         }
     }
 
-    fn check_number_operand(operator: &Token, expr: &Expr) -> Result<f64, RuntimeError> {
-        if let Value::Number(num) = Self::visit_expr(expr)? {
+    fn check_number_operand(&mut self, operator: &Token, expr: &Expr) -> Result<f64, RuntimeError> {
+        if let Value::Number(num) = self.visit_expr(expr)? {
             Ok(num)
         } else {
             Err(RuntimeError::new("Operand must be number.", operator))
@@ -54,12 +60,13 @@ impl Interpreter {
     }
 
     fn check_number_operands(
+        &mut self,
         operator: &Token,
         left: &Expr,
         right: &Expr,
     ) -> Result<(f64, f64), RuntimeError> {
-        if let Ok(Value::Number(left)) = Self::visit_expr(left)
-            && let Ok(Value::Number(right)) = Self::visit_expr(right)
+        if let Ok(Value::Number(left)) = self.visit_expr(left)
+            && let Ok(Value::Number(right)) = self.visit_expr(right)
         {
             Ok((left, right))
         } else {
@@ -67,50 +74,65 @@ impl Interpreter {
         }
     }
 
-    fn visit_stmt(stmt: &Stmt) -> Result<(), RuntimeError> {
+    fn visit_stmt(&mut self, stmt: &Stmt) -> Result<(), RuntimeError> {
         match &stmt {
             Stmt::Expression { expr } => {
-                Self::evaluate(expr);
+                self.evaluate(expr);
             }
             Stmt::Print { expr } => {
-                println!("{}", Self::evaluate(expr));
+                println!("{}", self.evaluate(expr));
+            }
+            Stmt::Var { .. } => {
+                self.visit_var_stmt(stmt)?;
             }
         }
 
         Ok(())
     }
 
-    fn visit_expr(expr: &Expr) -> Result<Value, RuntimeError> {
+    fn visit_var_stmt(&mut self, stmt: &Stmt) -> Result<(), RuntimeError> {
+        let Stmt::Var { name, initializer } = stmt else {
+            panic!("should be a variable statement")
+        };
+
+        let value = initializer.as_ref().map(|expr| self.evaluate(expr));
+
+        self.environment.define(name.lexeme.clone(), value);
+
+        Ok(())
+    }
+
+    fn visit_expr(&mut self, expr: &Expr) -> Result<Value, RuntimeError> {
         match expr {
             Expr::Literal(expr_literal) => match expr_literal {
-                crate::ExprLiteral::Number(literal_kind) => {
+                ExprLiteral::Number(literal_kind) => {
                     let LiteralKind::Number(n) = literal_kind else {
                         panic!("must be number")
                     };
 
                     Ok(Value::Number(*n))
                 }
-                crate::ExprLiteral::String(literal_kind) => {
+                ExprLiteral::String(literal_kind) => {
                     let LiteralKind::String(s) = literal_kind else {
                         panic!("must be string");
                     };
 
                     Ok(Value::String(s.into()))
                 }
-                crate::ExprLiteral::True => Ok(Value::Boolean(true)),
-                crate::ExprLiteral::False => Ok(Value::Boolean(false)),
-                crate::ExprLiteral::Nil => Ok(Value::Nil),
+                ExprLiteral::True => Ok(Value::Boolean(true)),
+                ExprLiteral::False => Ok(Value::Boolean(false)),
+                ExprLiteral::Nil => Ok(Value::Nil),
             },
 
             Expr::Unary { operator, right } => match operator {
                 Token {
                     kind: TokenKind::MINUS,
                     ..
-                } => Ok(Value::Number(-Self::check_number_operand(operator, right)?)),
+                } => Ok(Value::Number(-self.check_number_operand(operator, right)?)),
                 Token {
                     kind: TokenKind::BANG,
                     ..
-                } => Ok(Value::Boolean(!Self::is_truthy(right))),
+                } => Ok(Value::Boolean(!self.is_truthy(right))),
                 _ => {
                     panic!()
                 }
@@ -124,48 +146,52 @@ impl Interpreter {
                     kind: TokenKind::EQUAL_EQUAL,
                     ..
                 } => {
-                    let (left_val, right_val) = (Self::visit_expr(left)?, Self::visit_expr(right)?);
+                    let (left_val, right_val) = (self.visit_expr(left)?, self.visit_expr(right)?);
                     Ok(Value::Boolean(left_val == right_val))
                 }
                 Token {
                     kind: TokenKind::BANG_EQUAL,
                     ..
                 } => {
-                    let (left_val, right_val) = (Self::visit_expr(left)?, Self::visit_expr(right)?);
+                    let (left_val, right_val) = (self.visit_expr(left)?, self.visit_expr(right)?);
                     Ok(Value::Boolean(left_val != right_val))
                 }
                 Token {
                     kind: TokenKind::LESS,
                     ..
                 } => {
-                    let (left_val, right_val) = Self::check_number_operands(operator, left, right)?;
+                    let (left_val, right_val) =
+                        self.check_number_operands(operator, left, right)?;
                     Ok(Value::Boolean(left_val < right_val))
                 }
                 Token {
                     kind: TokenKind::LESS_EQUAL,
                     ..
                 } => {
-                    let (left_val, right_val) = Self::check_number_operands(operator, left, right)?;
+                    let (left_val, right_val) =
+                        self.check_number_operands(operator, left, right)?;
                     Ok(Value::Boolean(left_val <= right_val))
                 }
                 Token {
                     kind: TokenKind::GREATER,
                     ..
                 } => {
-                    let (left_val, right_val) = Self::check_number_operands(operator, left, right)?;
+                    let (left_val, right_val) =
+                        self.check_number_operands(operator, left, right)?;
                     Ok(Value::Boolean(left_val > right_val))
                 }
                 Token {
                     kind: TokenKind::GREATER_EQUAL,
                     ..
                 } => {
-                    let (left_val, right_val) = Self::check_number_operands(operator, left, right)?;
+                    let (left_val, right_val) =
+                        self.check_number_operands(operator, left, right)?;
                     Ok(Value::Boolean(left_val >= right_val))
                 }
                 Token {
                     kind: TokenKind::PLUS,
                     ..
-                } => match (Self::visit_expr(left)?, Self::visit_expr(right)?) {
+                } => match (self.visit_expr(left)?, self.visit_expr(right)?) {
                     (Value::Number(left), Value::Number(right)) => Ok(Value::Number(left + right)),
                     (Value::String(left), Value::String(right)) => {
                         Ok(Value::String(format!("{}{}", left, right)))
@@ -179,7 +205,7 @@ impl Interpreter {
                     kind: TokenKind::MINUS,
                     ..
                 } => {
-                    let (left, right) = Self::check_number_operands(operator, left, right)?;
+                    let (left, right) = self.check_number_operands(operator, left, right)?;
 
                     Ok(Value::Number(left - right))
                 }
@@ -187,7 +213,7 @@ impl Interpreter {
                     kind: TokenKind::STAR,
                     ..
                 } => {
-                    let (left, right) = Self::check_number_operands(operator, left, right)?;
+                    let (left, right) = self.check_number_operands(operator, left, right)?;
 
                     Ok(Value::Number(left * right))
                 }
@@ -195,13 +221,18 @@ impl Interpreter {
                     kind: TokenKind::SLASH,
                     ..
                 } => {
-                    let (left, right) = Self::check_number_operands(operator, left, right)?;
+                    let (left, right) = self.check_number_operands(operator, left, right)?;
 
                     Ok(Value::Number(left / right))
                 }
                 _ => Err(RuntimeError::new("Not a binary operator", operator)),
             },
-            Expr::Grouping { expr } => Self::visit_expr(expr),
+            Expr::Grouping { expr } => self.visit_expr(expr),
+            Expr::Variable { name } => self
+                .environment
+                .get(name)?
+                .clone()
+                .map_or(Ok(Value::Nil), Ok),
         }
     }
 }
@@ -212,7 +243,7 @@ impl Default for Interpreter {
     }
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone)]
 pub enum Value {
     Boolean(bool),
     Nil,
@@ -259,13 +290,13 @@ impl Display for Value {
 }
 
 #[derive(Debug, Error)]
-struct RuntimeError {
+pub(crate) struct RuntimeError {
     msg: String,
     token: Token,
 }
 
 impl RuntimeError {
-    fn new(msg: &str, token: &Token) -> Self {
+    pub(crate) fn new(msg: &str, token: &Token) -> Self {
         Self {
             msg: msg.to_string(),
             token: token.clone(),

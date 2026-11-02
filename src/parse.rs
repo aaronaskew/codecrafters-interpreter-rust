@@ -1,15 +1,10 @@
+use crate::SYNTAX_ERROR_EXIT_CODE;
+use crate::grammar::*;
+use crate::token::{Token, TokenKind};
 use std::{fmt::Display, process::exit};
-
 use thiserror::Error;
 
-use crate::SYNTAX_ERROR_EXIT_CODE;
-pub(crate) use crate::expr::*;
-pub(crate) use crate::stmt::*;
-
-use crate::token::{Token, TokenKind};
-
-pub(crate) mod expr;
-pub(crate) mod stmt;
+pub(crate) mod grammar;
 
 #[derive(Debug, Error)]
 pub struct ParseError {
@@ -44,25 +39,6 @@ pub struct Parser {
     current: usize,
 }
 
-// Lox Grammar
-// ===========
-// program        → statement* EOF ;
-//
-// statement      → exprStmt
-//                | printStmt ;
-//
-// exprStmt       → expression ";" ;
-// printStmt      → "print" expression ";" ;
-// expression     → equality ;
-// equality       → comparison ( ( "!=" | "==" ) comparison )* ;
-// comparison     → term ( ( ">" | ">=" | "<" | "<=" ) term )* ;
-// term           → factor ( ( "-" | "+" ) factor )* ;
-// factor         → unary ( ( "/" | "*" ) unary )* ;
-// unary          → ( "!" | "-" ) unary
-//                | primary ;
-// primary        → NUMBER | STRING | "true" | "false" | "nil"
-//                | "(" expression ")" ;
-
 impl Parser {
     pub fn new(tokens: &[Token]) -> Self {
         Self {
@@ -72,19 +48,13 @@ impl Parser {
     }
 
     pub fn parse(&mut self) -> Vec<Stmt> {
-        let mut statements = vec![];
-
-        while !self.is_at_end() {
-            match self.statement() {
-                Ok(stmt) => statements.push(stmt),
-                Err(e) => {
-                    eprintln!("{}", e);
-                    exit(SYNTAX_ERROR_EXIT_CODE);
-                }
+        match self.program() {
+            Ok(statements) => statements,
+            Err(e) => {
+                eprintln!("{}", e);
+                exit(SYNTAX_ERROR_EXIT_CODE);
             }
         }
-
-        statements
     }
 
     pub fn parse_expr(&mut self) -> Expr {
@@ -161,6 +131,66 @@ impl Parser {
         })
     }
 
+    // ============== Grammar Parsing ======================
+
+    // Lox Grammar
+    // ===========
+    // program        → declaration* EOF ;
+    // declaration    → varDecl
+    //                | statement ;
+    //
+    // varDecl        → "var" IDENTIFIER ( "=" expression )? ";" ;
+    //
+    // statement      → exprStmt
+    //                | printStmt ;
+    //
+    // exprStmt       → expression ";" ;
+    // printStmt      → "print" expression ";" ;
+    // expression     → equality ;
+    // equality       → comparison ( ( "!=" | "==" ) comparison )* ;
+    // comparison     → term ( ( ">" | ">=" | "<" | "<=" ) term )* ;
+    // term           → factor ( ( "-" | "+" ) factor )* ;
+    // factor         → unary ( ( "/" | "*" ) unary )* ;
+    // unary          → ( "!" | "-" ) unary
+    //                | primary ;
+    // primary        → NUMBER | STRING | "true" | "false" | "nil"
+    //                | "(" expression ")"
+    //                | IDENTIFIER ;
+
+    fn program(&mut self) -> Result<Vec<Stmt>, ParseError> {
+        let mut statements = vec![];
+
+        while !self.is_at_end() {
+            statements.push(self.declaration()?);
+        }
+
+        Ok(statements)
+    }
+
+    fn declaration(&mut self) -> Result<Stmt, ParseError> {
+        if self.match_token(&[TokenKind::VAR]) {
+            self.var_declaration()
+        } else {
+            self.statement()
+        }
+    }
+
+    fn var_declaration(&mut self) -> Result<Stmt, ParseError> {
+        let name = self.consume(TokenKind::IDENTIFIER, "Expect variable name.")?;
+
+        let mut initializer = None;
+        if self.match_token(&[TokenKind::EQUAL]) {
+            initializer = Some(self.expression()?);
+        }
+
+        self.consume(
+            TokenKind::SEMICOLON,
+            "Expect ';' after variable declaration.",
+        )?;
+
+        Ok(Stmt::Var { name, initializer })
+    }
+
     fn statement(&mut self) -> Result<Stmt, ParseError> {
         if self.match_token(&[TokenKind::PRINT]) {
             self.print_statement()
@@ -169,20 +199,20 @@ impl Parser {
         }
     }
 
-    fn print_statement(&mut self) -> Result<Stmt, ParseError> {
-        let value = self.expression()?;
-
-        self.consume(TokenKind::SEMICOLON, "Expect ';' after value.")?;
-
-        Ok(Stmt::Print { expr: value })
-    }
-
     fn expression_statement(&mut self) -> Result<Stmt, ParseError> {
         let expr = self.expression()?;
 
         self.consume(TokenKind::SEMICOLON, "Expect ';' after expression.")?;
 
         Ok(Stmt::Expression { expr })
+    }
+
+    fn print_statement(&mut self) -> Result<Stmt, ParseError> {
+        let value = self.expression()?;
+
+        self.consume(TokenKind::SEMICOLON, "Expect ';' after value.")?;
+
+        Ok(Stmt::Print { expr: value })
     }
 
     fn expression(&mut self) -> Result<Expr, ParseError> {
@@ -282,6 +312,10 @@ impl Parser {
             return Ok(Expr::Literal(ExprLiteral::String(
                 self.previous().literal.unwrap(),
             )));
+        } else if self.match_token(&[TokenKind::IDENTIFIER]) {
+            return Ok(Expr::Variable {
+                name: self.previous(),
+            });
         }
 
         if self.match_token(&[TokenKind::LEFT_PAREN]) {

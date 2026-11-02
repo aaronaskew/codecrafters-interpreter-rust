@@ -2,6 +2,7 @@ pub use interpret::*;
 pub use parse::*;
 pub use scan::*;
 
+mod environment;
 mod interpret;
 mod parse;
 mod scan;

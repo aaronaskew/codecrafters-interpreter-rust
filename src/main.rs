@@ -55,15 +55,17 @@ fn main() {
             let scanner = Scanner::from(source.as_str());
             let mut parser = lox_interpreter::Parser::new(&scanner.tokens());
             let expr = parser.parse_expr();
+            let mut interpreter = Interpreter::new();
 
-            println!("{}", Interpreter::evaluate(&expr))
+            println!("{}", interpreter.evaluate(&expr))
         }
         Commands::Run { file_path } => {
             let source = file_contents(file_path);
             let scanner = Scanner::from(source.as_str());
             let mut parser = lox_interpreter::Parser::new(&scanner.tokens());
             let statements = parser.parse();
-            Interpreter::interpret(statements);
+            let mut interpreter = Interpreter::new();
+            interpreter.interpret(statements);
         }
     }
 }
