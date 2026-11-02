@@ -2,18 +2,39 @@ use std::{fmt::Display, process::exit};
 
 use thiserror::Error;
 
+use crate::SYNTAX_ERROR_EXIT_CODE;
 pub(crate) use crate::expr::*;
+pub(crate) use crate::stmt::*;
 
 use crate::token::{Token, TokenKind};
 
 pub(crate) mod expr;
+pub(crate) mod stmt;
 
 #[derive(Debug, Error)]
-pub struct ParseError;
+pub struct ParseError {
+    msg: String,
+    token: Token,
+}
 
 impl Display for ParseError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "ParseError",)
+        if self.token.kind == TokenKind::EOF {
+            write!(
+                f,
+                "[line {}] Error at end: {}.",
+                self.token.line(),
+                self.msg
+            )
+        } else {
+            write!(
+                f,
+                "[line {}] Error at '{}': {}.",
+                self.token.line(),
+                self.token.lexeme,
+                self.msg
+            )
+        }
     }
 }
 
@@ -23,6 +44,15 @@ pub struct Parser {
     current: usize,
 }
 
+// Lox Grammar
+// ===========
+// program        → statement* EOF ;
+//
+// statement      → exprStmt
+//                | printStmt ;
+//
+// exprStmt       → expression ";" ;
+// printStmt      → "print" expression ";" ;
 // expression     → equality ;
 // equality       → comparison ( ( "!=" | "==" ) comparison )* ;
 // comparison     → term ( ( ">" | ">=" | "<" | "<=" ) term )* ;
@@ -41,12 +71,34 @@ impl Parser {
         }
     }
 
-    pub fn parse(&mut self) -> Result<Expr, ParseError> {
-        let expr = self.expression()?;
+    pub fn parse(&mut self) -> Vec<Stmt> {
+        let mut statements = vec![];
 
-        Ok(expr)
+        while !self.is_at_end() {
+            match self.statement() {
+                Ok(stmt) => statements.push(stmt),
+                Err(e) => {
+                    eprintln!("{}", e);
+                    exit(SYNTAX_ERROR_EXIT_CODE);
+                }
+            }
+        }
+
+        statements
     }
 
+    pub fn parse_expr(&mut self) -> Expr {
+        match self.expression() {
+            Ok(expr) => expr,
+            Err(e) => {
+                eprintln!("{}", e);
+                exit(SYNTAX_ERROR_EXIT_CODE);
+            }
+        }
+    }
+
+    /// If current token matches any of `kinds`, return true and advance current token. Else, return
+    /// false.
     fn match_token(&mut self, kinds: &[TokenKind]) -> bool {
         for kind in kinds {
             if self.check(kind) {
@@ -58,6 +110,7 @@ impl Parser {
         false
     }
 
+    /// Checks if current token matches kind without advancing current token.
     fn check(&mut self, kind: &TokenKind) -> bool {
         if self.is_at_end() {
             return false;
@@ -66,6 +119,7 @@ impl Parser {
         self.peek().kind == *kind
     }
 
+    /// Advances current token by one.
     fn advance(&mut self) -> Token {
         if !self.is_at_end() {
             self.current += 1;
@@ -78,6 +132,7 @@ impl Parser {
         self.peek().kind == TokenKind::EOF
     }
 
+    /// Returns current token. Does not advance current token.
     fn peek(&self) -> Token {
         self.tokens
             .get(self.current)
@@ -85,6 +140,7 @@ impl Parser {
             .clone()
     }
 
+    /// Returns previous token. Useful after a `match_token()` or `advance()` call.
     fn previous(&self) -> Token {
         self.tokens
             .get(self.current - 1)
@@ -92,12 +148,41 @@ impl Parser {
             .clone()
     }
 
-    fn consume(&mut self, kind: TokenKind, err_msg: &str) -> Result<Token, String> {
+    /// Consumes the current token and advances it by one. Returns Ok<Token> is matches `kind`, else
+    /// returns Err<String> with the provided `err_msg`.
+    fn consume(&mut self, kind: TokenKind, msg: &str) -> Result<Token, ParseError> {
         if self.check(&kind) {
             return Ok(self.advance());
         }
 
-        Err(err_msg.into())
+        Err(ParseError {
+            msg: msg.into(),
+            token: self.peek(),
+        })
+    }
+
+    fn statement(&mut self) -> Result<Stmt, ParseError> {
+        if self.match_token(&[TokenKind::PRINT]) {
+            self.print_statement()
+        } else {
+            self.expression_statement()
+        }
+    }
+
+    fn print_statement(&mut self) -> Result<Stmt, ParseError> {
+        let value = self.expression()?;
+
+        self.consume(TokenKind::SEMICOLON, "Expect ';' after value.")?;
+
+        Ok(Stmt::Print { expr: value })
+    }
+
+    fn expression_statement(&mut self) -> Result<Stmt, ParseError> {
+        let expr = self.expression()?;
+
+        self.consume(TokenKind::SEMICOLON, "Expect ';' after expression.")?;
+
+        Ok(Stmt::Expression { expr })
     }
 
     fn expression(&mut self) -> Result<Expr, ParseError> {
@@ -201,32 +286,14 @@ impl Parser {
 
         if self.match_token(&[TokenKind::LEFT_PAREN]) {
             let expr = self.expression()?;
-            match self.consume(TokenKind::RIGHT_PAREN, "Expect ')' after expression.") {
-                Ok(_) => {
-                    return Ok(Expr::Grouping { expr: expr.into() });
-                }
-                Err(msg) => {
-                    eprintln!("{}", msg);
-                    exit(65);
-                }
-            }
+            self.consume(TokenKind::RIGHT_PAREN, "Expect ')' after expression.")?;
+            return Ok(Expr::Grouping { expr: expr.into() });
         }
 
         Err(Self::error(self.peek(), "Expect expression".into()))
     }
 
     fn error(token: Token, msg: String) -> ParseError {
-        if token.kind == TokenKind::EOF {
-            eprintln!("[line {}] Error at end: {}.", token.line(), msg);
-        } else {
-            eprintln!(
-                "[line {}] Error at '{}': {}.",
-                token.line(),
-                token.lexeme,
-                msg
-            );
-        }
-
-        ParseError
+        ParseError { msg, token }
     }
 }

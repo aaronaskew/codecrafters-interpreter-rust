@@ -19,6 +19,7 @@ enum Commands {
     Tokenize { file_path: PathBuf },
     Parse { file_path: PathBuf },
     Evaluate { file_path: PathBuf },
+    Run { file_path: PathBuf },
 }
 
 fn file_contents(path: &PathBuf) -> String {
@@ -28,7 +29,7 @@ fn file_contents(path: &PathBuf) -> String {
     })
 }
 
-fn main() -> anyhow::Result<()> {
+fn main() {
     let cli = Cli::parse();
 
     match &cli.command {
@@ -39,7 +40,7 @@ fn main() -> anyhow::Result<()> {
             print!("{}", scanner);
 
             if scanner.has_error {
-                exit(65);
+                exit(SYNTAX_ERROR_EXIT_CODE);
             }
         }
         Commands::Parse { file_path } => {
@@ -47,24 +48,22 @@ fn main() -> anyhow::Result<()> {
             let scanner = Scanner::from(source.as_str());
             let mut parser = lox_interpreter::Parser::new(&scanner.tokens());
 
-            match parser.parse() {
-                Ok(expr) => expr.print_ast(),
-                Err(e) => exit(65),
-            }
+            parser.parse_expr().print_ast();
         }
         Commands::Evaluate { file_path } => {
             let source = file_contents(file_path);
             let scanner = Scanner::from(source.as_str());
             let mut parser = lox_interpreter::Parser::new(&scanner.tokens());
+            let expr = parser.parse_expr();
 
-            match parser.parse() {
-                Ok(expr) => {
-                    println!("{}", Interpreter::new(expr).evaluate())
-                }
-                Err(e) => exit(65),
-            }
+            println!("{}", Interpreter::evaluate(&expr))
+        }
+        Commands::Run { file_path } => {
+            let source = file_contents(file_path);
+            let scanner = Scanner::from(source.as_str());
+            let mut parser = lox_interpreter::Parser::new(&scanner.tokens());
+            let statements = parser.parse();
+            Interpreter::interpret(statements);
         }
     }
-
-    Ok(())
 }

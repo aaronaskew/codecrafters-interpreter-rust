@@ -1,3 +1,6 @@
+use crate::token::{LiteralKind, Token};
+use std::fmt::Display;
+
 // expression     → literal
 //                | unary
 //                | binary
@@ -9,35 +12,6 @@
 // binary         → expression operator expression ;
 // operator       → "==" | "!=" | "<" | "<=" | ">" | ">="
 //                | "+"  | "-"  | "*" | "/" ;
-
-use std::fmt::Display;
-
-use crate::token::{LiteralKind, Token};
-
-#[derive(Debug)]
-pub enum ExprLiteral {
-    Number(LiteralKind),
-    String(LiteralKind),
-    True,
-    False,
-    Nil,
-}
-
-impl Display for ExprLiteral {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(
-            f,
-            "{}",
-            match self {
-                ExprLiteral::Number(literal_kind) | ExprLiteral::String(literal_kind) =>
-                    literal_kind.to_string(),
-                ExprLiteral::True => true.to_string(),
-                ExprLiteral::False => false.to_string(),
-                ExprLiteral::Nil => "nil".to_string(),
-            }
-        )
-    }
-}
 
 #[derive(Debug)]
 pub enum Expr {
@@ -102,6 +76,31 @@ impl Display for Expr {
                     right: _,
                 } => self.parenthesize(),
                 Expr::Grouping { expr: _ } => self.parenthesize(),
+            }
+        )
+    }
+}
+
+#[derive(Debug)]
+pub enum ExprLiteral {
+    Number(LiteralKind),
+    String(LiteralKind),
+    True,
+    False,
+    Nil,
+}
+
+impl Display for ExprLiteral {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(
+            f,
+            "{}",
+            match self {
+                ExprLiteral::Number(literal_kind) | ExprLiteral::String(literal_kind) =>
+                    literal_kind.to_string(),
+                ExprLiteral::True => true.to_string(),
+                ExprLiteral::False => false.to_string(),
+                ExprLiteral::Nil => "nil".to_string(),
             }
         )
     }

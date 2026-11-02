@@ -3,39 +3,50 @@ use std::{fmt::Display, process::exit};
 use thiserror::Error;
 
 use crate::{
-    Expr,
+    Expr, RUNTIME_ERROR_EXIT_CODE, Stmt,
     token::{LiteralKind, Token, TokenKind},
 };
 
 #[derive(Debug)]
-pub struct Interpreter {
-    expr: Expr,
-}
+pub struct Interpreter {}
 
 impl Interpreter {
-    pub fn new(expr: Expr) -> Self {
-        Self { expr }
+    pub fn new() -> Self {
+        Self {}
     }
 
-    pub fn evaluate(&self) -> Value {
-        match Self::visit(&self.expr) {
+    pub fn interpret(statements: Vec<Stmt>) {
+        for stmt in &statements {
+            Self::execute(stmt);
+        }
+    }
+
+    fn execute(stmt: &Stmt) {
+        if let Err(e) = Self::visit_stmt(stmt) {
+            eprintln!("{}", e);
+            exit(RUNTIME_ERROR_EXIT_CODE);
+        }
+    }
+
+    pub fn evaluate(expr: &Expr) -> Value {
+        match Self::visit_expr(expr) {
             Ok(v) => v,
             Err(e) => {
                 eprintln!("{}", e);
-                exit(70);
+                exit(RUNTIME_ERROR_EXIT_CODE);
             }
         }
     }
 
     fn is_truthy(expr: &Expr) -> bool {
-        match Self::visit(expr) {
+        match Self::visit_expr(expr) {
             Ok(v) => v.is_truthy(),
             Err(_) => false,
         }
     }
 
     fn check_number_operand(operator: &Token, expr: &Expr) -> Result<f64, RuntimeError> {
-        if let Value::Number(num) = Self::visit(expr)? {
+        if let Value::Number(num) = Self::visit_expr(expr)? {
             Ok(num)
         } else {
             Err(RuntimeError::new("Operand must be number.", operator))
@@ -47,8 +58,8 @@ impl Interpreter {
         left: &Expr,
         right: &Expr,
     ) -> Result<(f64, f64), RuntimeError> {
-        if let Ok(Value::Number(left)) = Self::visit(left)
-            && let Ok(Value::Number(right)) = Self::visit(right)
+        if let Ok(Value::Number(left)) = Self::visit_expr(left)
+            && let Ok(Value::Number(right)) = Self::visit_expr(right)
         {
             Ok((left, right))
         } else {
@@ -56,7 +67,20 @@ impl Interpreter {
         }
     }
 
-    fn visit(expr: &Expr) -> Result<Value, RuntimeError> {
+    fn visit_stmt(stmt: &Stmt) -> Result<(), RuntimeError> {
+        match &stmt {
+            Stmt::Expression { expr } => {
+                Self::evaluate(expr);
+            }
+            Stmt::Print { expr } => {
+                println!("{}", Self::evaluate(expr));
+            }
+        }
+
+        Ok(())
+    }
+
+    fn visit_expr(expr: &Expr) -> Result<Value, RuntimeError> {
         match expr {
             Expr::Literal(expr_literal) => match expr_literal {
                 crate::ExprLiteral::Number(literal_kind) => {
@@ -100,14 +124,14 @@ impl Interpreter {
                     kind: TokenKind::EQUAL_EQUAL,
                     ..
                 } => {
-                    let (left_val, right_val) = (Self::visit(left)?, Self::visit(right)?);
+                    let (left_val, right_val) = (Self::visit_expr(left)?, Self::visit_expr(right)?);
                     Ok(Value::Boolean(left_val == right_val))
                 }
                 Token {
                     kind: TokenKind::BANG_EQUAL,
                     ..
                 } => {
-                    let (left_val, right_val) = (Self::visit(left)?, Self::visit(right)?);
+                    let (left_val, right_val) = (Self::visit_expr(left)?, Self::visit_expr(right)?);
                     Ok(Value::Boolean(left_val != right_val))
                 }
                 Token {
@@ -141,7 +165,7 @@ impl Interpreter {
                 Token {
                     kind: TokenKind::PLUS,
                     ..
-                } => match (Self::visit(left)?, Self::visit(right)?) {
+                } => match (Self::visit_expr(left)?, Self::visit_expr(right)?) {
                     (Value::Number(left), Value::Number(right)) => Ok(Value::Number(left + right)),
                     (Value::String(left), Value::String(right)) => {
                         Ok(Value::String(format!("{}{}", left, right)))
@@ -177,8 +201,14 @@ impl Interpreter {
                 }
                 _ => Err(RuntimeError::new("Not a binary operator", operator)),
             },
-            Expr::Grouping { expr } => Self::visit(expr),
+            Expr::Grouping { expr } => Self::visit_expr(expr),
         }
+    }
+}
+
+impl Default for Interpreter {
+    fn default() -> Self {
+        Self::new()
     }
 }
 
@@ -245,6 +275,6 @@ impl RuntimeError {
 
 impl Display for RuntimeError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        writeln!(f, "{}\n[line {}]", self.msg, self.token.line())
+        write!(f, "{}\n[line {}]", self.msg, self.token.line())
     }
 }
