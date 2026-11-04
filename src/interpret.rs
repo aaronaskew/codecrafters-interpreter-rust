@@ -233,6 +233,16 @@ impl Interpreter {
                 .get(name)?
                 .clone()
                 .map_or(Ok(Value::Nil), Ok),
+            Expr::Assign { name: _, value: _ } => self.visit_assign_expr(expr),
+        }
+    }
+
+    fn visit_assign_expr(&mut self, expr: &Expr) -> Result<Value, RuntimeError> {
+        if let Expr::Assign { name, value } = expr {
+            let value = self.evaluate(value);
+            Ok(self.environment.assign(name, &value)?)
+        } else {
+            panic!("expr must be Expr::Assign");
         }
     }
 }

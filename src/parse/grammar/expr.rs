@@ -31,6 +31,10 @@ pub enum Expr {
     Variable {
         name: Token,
     },
+    Assign {
+        name: Token,
+        value: Box<Expr>,
+    },
 }
 
 impl Expr {
@@ -56,6 +60,7 @@ impl Expr {
             ),
             Expr::Grouping { expr } => format!("(group {})", expr.parenthesize()),
             Expr::Variable { name: _ } => todo!(),
+            Expr::Assign { name: _, value: _ } => todo!(),
         })
         .to_string()
     }
@@ -81,6 +86,7 @@ impl Display for Expr {
                 } => self.parenthesize(),
                 Expr::Grouping { expr: _ } => self.parenthesize(),
                 Expr::Variable { name: _ } => todo!(),
+                Expr::Assign { name: _, value: _ } => todo!(),
             }
         )
     }

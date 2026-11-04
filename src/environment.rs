@@ -18,7 +18,19 @@ impl Environment {
         } else {
             Err(RuntimeError::new(
                 &format!("Undefined variable '{}'.", name.lexeme),
-                &name,
+                name,
+            ))
+        }
+    }
+
+    pub(crate) fn assign(&mut self, name: &Token, value: &Value) -> Result<Value, RuntimeError> {
+        if let Some(val) = self.values.get_mut(&name.lexeme) {
+            *val = Some(value.clone());
+            Ok(value.clone())
+        } else {
+            Err(RuntimeError::new(
+                &format!("Undefined variable '{}'.", name.lexeme),
+                name,
             ))
         }
     }
