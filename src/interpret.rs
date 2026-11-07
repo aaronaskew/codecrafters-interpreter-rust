@@ -91,8 +91,10 @@ impl Interpreter {
                 self.visit_var_stmt(stmt)?;
             }
             Stmt::Block { .. } => {
-                // todo!()
                 self.visit_block_stmt(stmt)?;
+            }
+            Stmt::If { .. } => {
+                self.visit_if_stmt(stmt)?;
             }
         }
 
@@ -290,6 +292,25 @@ impl Interpreter {
         } else {
             panic!("expr must be Expr::Assign");
         }
+    }
+
+    fn visit_if_stmt(&mut self, stmt: &Stmt) -> Result<(), RuntimeError> {
+        let Stmt::If {
+            condition,
+            then_branch,
+            else_branch_opt,
+        } = stmt
+        else {
+            panic!("must be Stmt::If");
+        };
+
+        if self.is_truthy(condition) {
+            self.execute(then_branch)?;
+        } else if let Some(else_branch) = else_branch_opt {
+            self.execute(else_branch)?;
+        }
+
+        Ok(())
     }
 }
 

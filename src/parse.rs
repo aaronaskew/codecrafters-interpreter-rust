@@ -142,10 +142,14 @@ impl Parser {
     // varDecl        → "var" IDENTIFIER ( "=" expression )? ";" ;
     //
     // statement      → exprStmt
+    //                | ifStmt
     //                | printStmt
     //                | block ;
     //
     // exprStmt       → expression ";" ;
+    // ifStmt         → "if" "(" expression ")" statement
+    //                ( "else" statement )? ;
+    //
     // printStmt      → "print" expression ";" ;
     // block          → "{" declaration* "}" ;
     //
@@ -202,6 +206,8 @@ impl Parser {
             self.print_statement()
         } else if self.match_token(&[TokenKind::LEFT_BRACE]) {
             self.block()
+        } else if self.match_token(&[TokenKind::IF]) {
+            self.if_statement()
         } else {
             self.expression_statement()
         }
@@ -217,6 +223,24 @@ impl Parser {
         self.consume(TokenKind::RIGHT_BRACE, "Expect '}' after block.")?;
 
         Ok(Stmt::Block { statements })
+    }
+
+    fn if_statement(&mut self) -> Result<Stmt, ParseError> {
+        self.consume(TokenKind::LEFT_PAREN, "Expect '(' after 'if'.")?;
+        let condition = self.expression()?;
+        self.consume(TokenKind::RIGHT_PAREN, "Expect ')' after if condition.")?;
+
+        let then_branch = Box::new(self.statement()?);
+        let mut else_branch_opt = None;
+        if self.match_token(&[TokenKind::ELSE]) {
+            else_branch_opt = Some(Box::new(self.statement()?));
+        }
+
+        Ok(Stmt::If {
+            condition,
+            then_branch,
+            else_branch_opt,
+        })
     }
 
     fn expression_statement(&mut self) -> Result<Stmt, ParseError> {
