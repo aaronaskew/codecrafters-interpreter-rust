@@ -125,6 +125,8 @@ impl Interpreter {
             }
         }
 
+        self.environment = previous_environment;
+
         Ok(())
     }
 
