@@ -12,4 +12,7 @@ pub enum Stmt {
         name: Token,
         initializer: Option<Expr>,
     },
+    Block {
+        statements: Vec<Stmt>,
+    },
 }

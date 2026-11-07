@@ -1,4 +1,4 @@
-use std::{fmt::Display, process::exit};
+use std::{cell::RefCell, fmt::Display, process::exit, rc::Rc};
 
 use thiserror::Error;
 
@@ -11,32 +11,37 @@ use crate::{
 
 #[derive(Debug)]
 pub struct Interpreter {
-    environment: Environment,
+    environment: Rc<RefCell<Environment>>,
 }
 
 impl Interpreter {
     pub fn new() -> Self {
         Self {
-            environment: Environment::default(),
+            environment: Rc::new(RefCell::new(Environment::default())),
         }
     }
 
     pub fn interpret(&mut self, statements: Vec<Stmt>) {
         for stmt in &statements {
-            self.execute(stmt);
+            match self.execute(stmt) {
+                Ok(_) => {}
+                Err(e) => {
+                    eprintln!("{}", e);
+                    exit(RUNTIME_ERROR_EXIT_CODE);
+                }
+            }
         }
     }
 
-    fn execute(&mut self, stmt: &Stmt) {
-        if let Err(e) = self.visit_stmt(stmt) {
-            eprintln!("{}", e);
-            exit(RUNTIME_ERROR_EXIT_CODE);
-        }
+    fn execute(&mut self, stmt: &Stmt) -> Result<(), RuntimeError> {
+        self.visit_stmt(stmt)?;
+
+        Ok(())
     }
 
-    pub fn evaluate(&mut self, expr: &Expr) -> Value {
+    pub fn evaluate(&mut self, expr: &Expr) -> Result<Value, RuntimeError> {
         match self.visit_expr(expr) {
-            Ok(v) => v,
+            Ok(v) => Ok(v),
             Err(e) => {
                 eprintln!("{}", e);
                 exit(RUNTIME_ERROR_EXIT_CODE);
@@ -77,13 +82,46 @@ impl Interpreter {
     fn visit_stmt(&mut self, stmt: &Stmt) -> Result<(), RuntimeError> {
         match &stmt {
             Stmt::Expression { expr } => {
-                self.evaluate(expr);
+                self.evaluate(expr)?;
             }
             Stmt::Print { expr } => {
-                println!("{}", self.evaluate(expr));
+                println!("{}", self.evaluate(expr)?);
             }
             Stmt::Var { .. } => {
                 self.visit_var_stmt(stmt)?;
+            }
+            Stmt::Block { .. } => {
+                // todo!()
+                self.visit_block_stmt(stmt)?;
+            }
+        }
+
+        Ok(())
+    }
+
+    fn visit_block_stmt(&mut self, stmt: &Stmt) -> Result<(), RuntimeError> {
+        if let Stmt::Block { statements } = stmt {
+            let environment = Environment::new(Some(self.environment.clone()));
+
+            self.execute_block(statements, environment)?;
+        }
+
+        Ok(())
+    }
+
+    fn execute_block(
+        &mut self,
+        statements: &Vec<Stmt>,
+        environment: Environment,
+    ) -> Result<(), RuntimeError> {
+        let previous_environment = self.environment.clone();
+
+        self.environment = Rc::new(RefCell::new(environment));
+        for statement in statements {
+            if let Err(e) = self.execute(statement) {
+                self.environment = previous_environment;
+
+                return Err(e);
             }
         }
 
@@ -95,9 +133,14 @@ impl Interpreter {
             panic!("should be a variable statement")
         };
 
-        let value = initializer.as_ref().map(|expr| self.evaluate(expr));
+        let value = match initializer.as_ref().map(|e| self.evaluate(e)) {
+            Some(value) => Some(value?),
+            None => None,
+        };
 
-        self.environment.define(name.lexeme.clone(), value);
+        self.environment
+            .borrow_mut()
+            .define(name.lexeme.clone(), value);
 
         Ok(())
     }
@@ -230,6 +273,7 @@ impl Interpreter {
             Expr::Grouping { expr } => self.visit_expr(expr),
             Expr::Variable { name } => self
                 .environment
+                .borrow()
                 .get(name)?
                 .clone()
                 .map_or(Ok(Value::Nil), Ok),
@@ -239,8 +283,8 @@ impl Interpreter {
 
     fn visit_assign_expr(&mut self, expr: &Expr) -> Result<Value, RuntimeError> {
         if let Expr::Assign { name, value } = expr {
-            let value = self.evaluate(value);
-            Ok(self.environment.assign(name, &value)?)
+            let value = self.evaluate(value)?;
+            Ok(self.environment.borrow_mut().assign(name, &value)?)
         } else {
             panic!("expr must be Expr::Assign");
         }
@@ -300,7 +344,7 @@ impl Display for Value {
 }
 
 #[derive(Debug, Error)]
-pub(crate) struct RuntimeError {
+pub struct RuntimeError {
     msg: String,
     token: Token,
 }

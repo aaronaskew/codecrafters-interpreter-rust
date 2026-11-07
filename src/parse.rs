@@ -142,10 +142,12 @@ impl Parser {
     // varDecl        → "var" IDENTIFIER ( "=" expression )? ";" ;
     //
     // statement      → exprStmt
-    //                | printStmt ;
+    //                | printStmt
+    //                | block ;
     //
     // exprStmt       → expression ";" ;
     // printStmt      → "print" expression ";" ;
+    // block          → "{" declaration* "}" ;
     //
     // expression     → assignment ;
     // assignment     → IDENTIFIER "=" assignment
@@ -198,9 +200,23 @@ impl Parser {
     fn statement(&mut self) -> Result<Stmt, ParseError> {
         if self.match_token(&[TokenKind::PRINT]) {
             self.print_statement()
+        } else if self.match_token(&[TokenKind::LEFT_BRACE]) {
+            self.block()
         } else {
             self.expression_statement()
         }
+    }
+
+    fn block(&mut self) -> Result<Stmt, ParseError> {
+        let mut statements = vec![];
+
+        while !self.check(&TokenKind::RIGHT_BRACE) && !self.is_at_end() {
+            statements.push(self.declaration()?);
+        }
+
+        self.consume(TokenKind::RIGHT_BRACE, "Expect '}' after block.")?;
+
+        Ok(Stmt::Block { statements })
     }
 
     fn expression_statement(&mut self) -> Result<Stmt, ParseError> {

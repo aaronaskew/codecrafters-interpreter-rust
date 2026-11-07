@@ -57,7 +57,12 @@ fn main() {
             let expr = parser.parse_expr();
             let mut interpreter = Interpreter::new();
 
-            println!("{}", interpreter.evaluate(&expr))
+            println!(
+                "{}",
+                interpreter
+                    .evaluate(&expr)
+                    .expect("expression should evaluate without error")
+            )
         }
         Commands::Run { file_path } => {
             let source = file_contents(file_path);
