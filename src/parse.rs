@@ -142,12 +142,16 @@ impl Parser {
     // varDecl        → "var" IDENTIFIER ( "=" expression )? ";" ;
     //
     // statement      → exprStmt
+    //                | forStmt
     //                | ifStmt
     //                | printStmt
     //                | whileStmt
     //                | block ;
     //
     // exprStmt       → expression ";" ;
+    // forStmt        → "for" "(" ( varDecl | exprStmt | ";" )
+    //                   expression? ";"
+    //                   expression? ")" statement ;
     // ifStmt         → "if" "(" expression ")" statement
     //                ( "else" statement )? ;
     //
@@ -214,6 +218,8 @@ impl Parser {
             self.if_statement()
         } else if self.match_token(&[TokenKind::WHILE]) {
             self.while_statement()
+        } else if self.match_token(&[TokenKind::FOR]) {
+            self.for_statement()
         } else {
             self.expression_statement()
         }
@@ -260,6 +266,51 @@ impl Parser {
             condition,
             body: Box::new(body),
         })
+    }
+
+    fn for_statement(&mut self) -> Result<Stmt, ParseError> {
+        self.consume(TokenKind::LEFT_PAREN, "Expect '(' after 'for'.")?;
+
+        let initializer_opt = if self.match_token(&[TokenKind::SEMICOLON]) {
+            None
+        } else if self.match_token(&[TokenKind::VAR]) {
+            Some(self.var_declaration()?)
+        } else {
+            Some(self.expression_statement()?)
+        };
+
+        let mut condition_opt = None;
+        if !self.check(&TokenKind::SEMICOLON) {
+            condition_opt = Some(self.expression()?);
+        }
+        self.consume(TokenKind::SEMICOLON, "Expect ';' after loop condition.")?;
+
+        let mut increment_opt = None;
+        if !self.check(&TokenKind::RIGHT_PAREN) {
+            increment_opt = Some(self.expression()?);
+        }
+        self.consume(TokenKind::RIGHT_PAREN, "Expect ')' after for clauses.")?;
+
+        let mut body = self.statement()?;
+
+        if let Some(increment) = increment_opt {
+            body = Stmt::Block {
+                statements: vec![body, Stmt::Expression { expr: increment }],
+            };
+        }
+
+        body = Stmt::While {
+            condition: condition_opt.unwrap_or(Expr::Literal(ExprLiteral::True)),
+            body: Box::new(body),
+        };
+
+        if let Some(initializer) = initializer_opt {
+            body = Stmt::Block {
+                statements: vec![initializer, body],
+            };
+        }
+
+        Ok(body)
     }
 
     fn expression_statement(&mut self) -> Result<Stmt, ParseError> {
