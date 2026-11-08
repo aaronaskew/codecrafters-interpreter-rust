@@ -154,9 +154,12 @@ impl Parser {
     // block          → "{" declaration* "}" ;
     //
     // expression     → assignment ;
-    // assignment     → IDENTIFIER "=" assignment
-    //                | equality ;
     //
+    // assignment     → IDENTIFIER "=" assignment
+    //                | logic_or ;
+    //
+    // logic_or       → logic_and ( "or" logic_and )* ;
+    // logic_and      → equality ( "and" equality )* ;
     // equality       → comparison ( ( "!=" | "==" ) comparison )* ;
     // comparison     → term ( ( ">" | ">=" | "<" | "<=" ) term )* ;
     // term           → factor ( ( "-" | "+" ) factor )* ;
@@ -264,7 +267,7 @@ impl Parser {
     }
 
     fn assignment(&mut self) -> Result<Expr, ParseError> {
-        let expr = self.equality()?;
+        let expr = self.or()?;
 
         if self.match_token(&[TokenKind::EQUAL]) {
             let equals = self.previous();
@@ -278,6 +281,38 @@ impl Parser {
             }
 
             return Err(Self::error(equals, "Invalid assignment target.".into()));
+        }
+
+        Ok(expr)
+    }
+
+    fn or(&mut self) -> Result<Expr, ParseError> {
+        let mut expr = self.and()?;
+
+        while self.match_token(&[TokenKind::OR]) {
+            let operator = self.previous();
+            let right = self.and()?;
+            expr = Expr::Logical {
+                left: Box::new(expr),
+                operator,
+                right: Box::new(right),
+            };
+        }
+
+        Ok(expr)
+    }
+
+    fn and(&mut self) -> Result<Expr, ParseError> {
+        let mut expr = self.equality()?;
+
+        while self.match_token(&[TokenKind::AND]) {
+            let operator = self.previous();
+            let right = self.equality()?;
+            expr = Expr::Logical {
+                left: Box::new(expr),
+                operator,
+                right: Box::new(right),
+            };
         }
 
         Ok(expr)

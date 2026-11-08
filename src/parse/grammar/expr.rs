@@ -35,6 +35,11 @@ pub enum Expr {
         name: Token,
         value: Box<Expr>,
     },
+    Logical {
+        left: Box<Expr>,
+        operator: Token,
+        right: Box<Expr>,
+    },
 }
 
 impl Expr {
@@ -59,8 +64,9 @@ impl Expr {
                 right.parenthesize()
             ),
             Expr::Grouping { expr } => format!("(group {})", expr.parenthesize()),
-            Expr::Variable { name: _ } => todo!(),
-            Expr::Assign { name: _, value: _ } => todo!(),
+            Expr::Variable { .. } => todo!(),
+            Expr::Assign { .. } => todo!(),
+            Expr::Logical { .. } => todo!(),
         })
         .to_string()
     }
@@ -73,20 +79,14 @@ impl Display for Expr {
             "{}",
             match self {
                 Expr::Literal(literal) => literal.to_string(),
-                Expr::Unary {
-                    operator: _,
-                    right: _,
-                } => {
+                Expr::Unary { .. } => {
                     self.parenthesize()
                 }
-                Expr::Binary {
-                    left: _,
-                    operator: _,
-                    right: _,
-                } => self.parenthesize(),
-                Expr::Grouping { expr: _ } => self.parenthesize(),
-                Expr::Variable { name: _ } => todo!(),
-                Expr::Assign { name: _, value: _ } => todo!(),
+                Expr::Binary { .. } => self.parenthesize(),
+                Expr::Grouping { .. } => self.parenthesize(),
+                Expr::Variable { .. } => todo!(),
+                Expr::Assign { .. } => todo!(),
+                Expr::Logical { .. } => todo!(),
             }
         )
     }

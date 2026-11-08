@@ -281,7 +281,8 @@ impl Interpreter {
                 .get(name)?
                 .clone()
                 .map_or(Ok(Value::Nil), Ok),
-            Expr::Assign { name: _, value: _ } => self.visit_assign_expr(expr),
+            Expr::Assign { .. } => self.visit_assign_expr(expr),
+            Expr::Logical { .. } => self.visit_logical_expr(expr),
         }
     }
 
@@ -311,6 +312,31 @@ impl Interpreter {
         }
 
         Ok(())
+    }
+
+    fn visit_logical_expr(&mut self, expr: &Expr) -> Result<Value, RuntimeError> {
+        let Expr::Logical {
+            left,
+            operator,
+            right,
+        } = expr
+        else {
+            panic!("must be Expr::Logical");
+        };
+
+        let left = self.evaluate(left)?;
+
+        if matches!(operator.kind, TokenKind::OR) {
+            if left.is_truthy() {
+                return Ok(left);
+            }
+        } else {
+            if !left.is_truthy() {
+                return Ok(left);
+            }
+        }
+
+        self.evaluate(right)
     }
 }
 
