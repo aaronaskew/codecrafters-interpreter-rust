@@ -96,6 +96,7 @@ impl Interpreter {
             Stmt::If { .. } => {
                 self.visit_if_stmt(stmt)?;
             }
+            Stmt::While { .. } => self.visit_while_stmt(stmt)?,
         }
 
         Ok(())
@@ -337,6 +338,18 @@ impl Interpreter {
         }
 
         self.evaluate(right)
+    }
+
+    fn visit_while_stmt(&mut self, stmt: &Stmt) -> Result<(), RuntimeError> {
+        let Stmt::While { condition, body } = stmt else {
+            panic!("must be Stmt::While");
+        };
+
+        while self.is_truthy(condition) {
+            self.execute(body)?;
+        }
+
+        Ok(())
     }
 }
 
